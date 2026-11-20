@@ -166,6 +166,8 @@ def describe(channel: str, action: str) -> str:
 
 
 def _as_int(v: Any) -> int:
+    if v is None:
+        return 1
     if isinstance(v, bool):
         return int(v)
     if isinstance(v, int):
@@ -177,6 +179,8 @@ def _as_int(v: Any) -> int:
 
 
 def _as_bool(v: Any) -> bool:
+    if v is None:
+        return True
     if isinstance(v, bool):
         return v
     s = str(v).strip().lower()
@@ -196,6 +200,8 @@ def _as_str(v: Any) -> str:
 
 
 def _as_list(v: Any, elem: str) -> List[Any]:
+    if v is None:
+        return []
     if isinstance(v, str):
         s = v.strip()
         if s == "":
@@ -213,6 +219,18 @@ def _as_list(v: Any, elem: str) -> List[Any]:
     return v
 
 
+
+def _pick(form: Dict[str, Any], sp: Dict[str, Any]) -> Any:
+    """按规格里的字段名取值；模板用 name="value" 时也能命中。"""
+    field = sp.get("field", "value")
+    if field in form:
+        return form[field]
+    for alt in ("value", "raw", "proxies", "data"):
+        if alt in form:
+            return form[alt]
+    return None
+
+
 def build(channel: str, action: str, form: Dict[str, Any]) -> Any:
     """把网页表单字段转换成后端要求的 payload 值。
 
@@ -226,13 +244,13 @@ def build(channel: str, action: str, form: Dict[str, Any]) -> Any:
     if kind == "unit":
         return 1
     if kind == "int":
-        return _as_int(form.get(sp.get("field", "value"), 1))
+        return _as_int(_pick(form, sp))
     if kind == "bool":
-        return _as_bool(form.get(sp.get("field", "value"), True))
+        return _as_bool(_pick(form, sp))
     if kind == "str":
-        return _as_str(form.get(sp.get("field", "value"), ""))
+        return _as_str(_pick(form, sp))
     if kind == "list":
-        return _as_list(form.get(sp.get("field", "value"), []), sp.get("elem", "int"))
+        return _as_list(_pick(form, sp), sp.get("elem", "int"))
     if kind == "tuple2":
         out = []
         for name in sp["fields"]:
