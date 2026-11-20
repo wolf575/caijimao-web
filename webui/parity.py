@@ -311,6 +311,7 @@ def nav() -> list[dict[str, str]]:
         {"href": "/ecc", "label": "频道群克隆PRO"},
         {"href": "/va", "label": "付费群助手"},
         {"href": "/btn-bot", "label": "按钮机器人"},
+        {"href": "/tools", "label": "工具"},
         {"href": "/settings", "label": "全局设置"},
         {"href": "/logs", "label": "日志"},
         {"href": CONSOLE_PAGE, "label": "API 控制台"},

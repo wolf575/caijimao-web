@@ -37,7 +37,7 @@
   <div class="card-head">
     <h3>配置行（{{ rows | length }}）</h3>
     <div class="card-head-actions">
-      <button class="btn primary" onclick="openCfg('{{ channel }}', 0)">＋ 新增配置</button>
+      <button class="btn primary" onclick="openCfg(0)">＋ 新增配置</button>
       <button class="btn" data-cfg-rows="StartCfgRows">启动选中</button>
       <button class="btn" data-cfg-rows="StopCfgRows">停止选中</button>
       <button class="btn danger" data-cfg-rows="RmCfgRows">删除选中</button>
@@ -68,7 +68,7 @@
         <td class="ellip" title="{{ r.from }}">{{ r.from or '—' }}</td>
         <td class="ellip" title="{{ r.to }}">{{ r.to or '—' }}</td>
         <td class="row-actions">
-          <button class="btn tiny" onclick="openCfg('{{ channel }}', {{ r.id }})">编辑</button>
+          <button class="btn tiny" onclick="openCfg({{ r.id }})">编辑</button>
           <button class="btn tiny" data-cfg-rows="StartCfgRows" data-ids="{{ r.id }}">启动</button>
           <button class="btn tiny" data-cfg-rows="StopCfgRows" data-ids="{{ r.id }}">停止</button>
           <button class="btn tiny danger" data-cfg-rows="RmCfgRows" data-ids="{{ r.id }}">删除</button>
@@ -78,7 +78,7 @@
     </tbody>
   </table>
   {% else %}
-  <p class="empty">还没有配置。点右上角「＋ 新增配置」创建第一条，填好来源群和目标群即可启动。</p>
+  <p class="empty">还没有配置。点右上角「＋ 新增配置」，表单会按后端模板自动生成，填来源群和目标群即可启动。</p>
   {% endif %}
 </section>
 {% else %}
@@ -86,9 +86,9 @@
   <div class="card-head">
     <h3>整份配置（该通道只能整体保存）</h3>
     <div class="card-head-actions">
-      <button class="btn" onclick="loadWhole('{{ channel }}')">读取当前配置</button>
-      <button class="btn" onclick="fillWholeTpl('{{ channel }}')">填入模板</button>
-      <button class="btn primary" onclick="saveWhole('{{ channel }}')">保存并生效</button>
+      <button class="btn" onclick="loadWhole()">读取当前配置</button>
+      <button class="btn" onclick="fillWholeTpl()">填入模板</button>
+      <button class="btn primary" onclick="saveWhole()">保存并生效</button>
     </div>
   </div>
   <p class="empty">
@@ -115,80 +115,20 @@
 
 {# ------------------------------------------------------------------ 弹层 #}
 <div class="modal-backdrop" id="cfg-modal">
-  <div class="modal">
+  <div class="modal wide">
     <header>
       <h3 id="cfg-title">新增配置</h3>
       <button class="btn tiny" onclick="closeCfg()">✕</button>
     </header>
     <div class="body">
-      <input type="hidden" id="cfg-channel">
       <input type="hidden" id="cfg-id" value="0">
-      <div class="grid2">
-        <div class="field">
-          <label>标题（自己认得出的名字）</label>
-          <input id="cfg-title-input" placeholder="例如 测试群→转发群">
-        </div>
-        <div class="field">
-          <label>规则类型</label>
-          <select id="cfg-action">
-            {% for key, text in model.action_labels.items() %}
-              <option value="{{ key }}">{{ text }}（{{ key }}）</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-      <div class="grid2" style="margin-top:12px">
-        <div class="field">
-          <label>来源群 / 频道 ID（负数，如 -1001898824702）</label>
-          <input id="cfg-from-cid" placeholder="-100…">
-          <span class="hint">在桌面版或 TD 登录页的聊天列表里复制 cid</span>
-        </div>
-        <div class="field">
-          <label>来源名称（可留空）</label>
-          <input id="cfg-from-title" placeholder="显示用，不影响功能">
-        </div>
-      </div>
-      <div class="grid2" style="margin-top:12px">
-        <div class="field">
-          <label>目标群 / 频道 ID</label>
-          <input id="cfg-to-cid" placeholder="-100…">
-        </div>
-        <div class="field">
-          <label>目标名称（可留空）</label>
-          <input id="cfg-to-title">
-        </div>
-      </div>
-      <div class="grid3" style="margin-top:12px">
-        <div class="field">
-          <label>起点方式</label>
-          <select id="cfg-start-tp">
-            <option value="url">按消息链接</option>
-            <option value="date">按时间</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>起点链接 / 时间戳</label>
-          <input id="cfg-start-val" placeholder="https://t.me/xxx/123 或 unix 时间戳">
-        </div>
-        <div class="field">
-          <label>终点（可留空=到最新）</label>
-          <input id="cfg-end-val">
-        </div>
-      </div>
-      <div class="grid2" style="margin-top:12px">
-        <div class="field">
-          <label>排除关键词（逗号分隔，可留空）</label>
-          <input id="cfg-exclude" placeholder="广告,推广">
-        </div>
-        <div class="field">
-          <label>保存后立即启动</label>
-          <label class="chk"><input type="checkbox" id="cfg-is-start"> 是</label>
-        </div>
-      </div>
+      <p class="state-note" id="cfg-loading">正在读取后端配置模板…</p>
+      <div id="cfg-fields"></div>
       <details style="margin-top:14px">
-        <summary style="cursor:pointer;color:var(--muted);font-size:12.5px">高级：直接编辑完整 JSON（改这里会覆盖上面的表单）</summary>
+        <summary style="cursor:pointer;color:var(--muted);font-size:12.5px">高级：直接编辑完整 JSON（改动后以上面的表单不再生效）</summary>
         <textarea id="cfg-json" spellcheck="false"
-          style="width:100%;height:260px;margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px"></textarea>
+          style="width:100%;height:300px;margin-top:8px;font-family:ui-monospace,Consolas,monospace;font-size:12px"></textarea>
+        <div class="mini" style="margin-top:6px">这个框里改过内容时，保存会用整份 JSON 覆盖；没改过就用上面的表单字段。</div>
       </details>
       <div id="cfg-result" class="mini"></div>
     </div>
@@ -204,6 +144,12 @@
 <script>
 const CH = "{{ channel }}";
 const ROW_API = {{ 'true' if row_api else 'false' }};
+const GROUP_LABELS = {
+  title: '基本信息', prior_no: '基本信息', is_start: '基本信息', ruler_action: '基本信息',
+  data: '规则参数', cron_apply: '定时', crons: '定时计划',
+};
+
+let cfgJsonOriginal = '';
 
 async function postForm(url, data) {
   data.append('csrf_token', window.CSRF);
@@ -213,69 +159,99 @@ async function postForm(url, data) {
   return {status: r.status, body: j};
 }
 
-async function openCfg(channel, id) {
-  document.getElementById('cfg-channel').value = channel;
+function fmtValue(f) {
+  const v = f.value;
+  if (f.kind === 'bool') return v ? '1' : '';
+  if (f.kind === 'ints') return (v || []).join(',');
+  if (f.kind === 'lines') return (v || []).join('\n');
+  if (f.kind === 'json') {
+    try { return JSON.stringify(v === undefined ? null : v, null, 0); } catch (e) { return ''; }
+  }
+  return v === null || v === undefined ? '' : String(v);
+}
+
+function renderField(f) {
+  const id = 'f_' + f.path.replace(/[^A-Za-z0-9_]/g, '_');
+  const label = `<label for="${id}">${f.label} <span class="mini">${f.path}</span></label>`;
+  const val = fmtValue(f);
+  if (f.kind === 'bool') {
+    return `<div class="field"><label class="chk"><input type="checkbox" id="${id}" data-path="${f.path}"
+      ${f.value ? 'checked' : ''}> ${f.label}</label></div>`;
+  }
+  if (f.kind === 'enum') {
+    const opts = (f.options || []).map((o) => `<option value="${o}" ${o === f.value ? 'selected' : ''}>${o}</option>`).join('');
+    return `<div class="field">${label}<select id="${id}" data-path="${f.path}">${opts}</select></div>`;
+  }
+  if (f.kind === 'number') {
+    return `<div class="field">${label}<input type="number" id="${id}" data-path="${f.path}" value="${val}"></div>`;
+  }
+  if (f.kind === 'lines' || f.kind === 'json') {
+    const rows = f.kind === 'lines' ? 3 : 4;
+    return `<div class="field">${label}<textarea id="${id}" data-path="${f.path}" rows="${rows}"
+      spellcheck="false">${val.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea></div>`;
+  }
+  const ph = f.kind === 'ints' ? 'placeholder="多个用逗号分隔，如 1,2,3"' : '';
+  return `<div class="field">${label}<input type="text" id="${id}" data-path="${f.path}" value="${String(val).replace(/"/g, '&quot;')}" ${ph}></div>`;
+}
+
+function renderSchema(groups) {
+  const box = document.getElementById('cfg-fields');
+  box.innerHTML = groups.map((g, i) => {
+    const title = GROUP_LABELS[g.group] || g.label || g.group;
+    const open = ['title', 'data'].includes(g.group) || i === 0 ? 'open' : '';
+    return `<details class="cfg-group" ${open}>
+      <summary>${title}（${g.fields.length} 项）</summary>
+      <div class="grid2">${g.fields.map(renderField).join('')}</div>
+    </details>`;
+  }).join('');
+}
+
+async function openCfg(id) {
   document.getElementById('cfg-id').value = id;
   document.getElementById('cfg-title').textContent = id ? `编辑配置 #${id}` : '新增配置';
   document.getElementById('cfg-result').textContent = '';
-  const q = new URLSearchParams({channel: channel, id: String(id)});
-  const r = await fetch('/api/cfg/row?' + q, {credentials: 'same-origin'});
-  const j = await r.json();
-  if (!j.ok) { CJ.toast(j.error || '读取失败', 'err'); return; }
-  const row = j.row || {};
-  const m = {{ model | tojson }};
-  const get = (path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), row);
-  const from = get(m.from_key) || {}, to = get(m.to_key) || {};
-  const start = get(m.start_key) || {}, end = get(m.end_key) || {};
-  document.getElementById('cfg-title-input').value = row.title || '';
-  document.getElementById('cfg-action').value = row.ruler_action || (m.actions[0] || '');
-  document.getElementById('cfg-from-cid').value = from.cid || '';
-  document.getElementById('cfg-from-title').value = from.title || '';
-  document.getElementById('cfg-to-cid').value = to.cid || '';
-  document.getElementById('cfg-to-title').value = to.title || '';
-  document.getElementById('cfg-start-tp').value = start.tp || 'url';
-  document.getElementById('cfg-start-val').value = start.tp === 'date' ? (start.date || '') : (start.url || '');
-  document.getElementById('cfg-end-val').value = end.tp === 'date' ? (end.date || '') : (end.url || '');
-  document.getElementById('cfg-is-start').checked = !!row.is_start;
-  const holder = row.data && row.data.Craw ? row.data.Craw : row.data;
-  document.getElementById('cfg-exclude').value = ((holder && holder.exclude_keywords) || []).join(',');
-  document.getElementById('cfg-json').value = JSON.stringify(row, null, 2);
+  document.getElementById('cfg-fields').innerHTML = '';
+  document.getElementById('cfg-json').value = '';
+  document.getElementById('cfg-loading').style.display = '';
   document.getElementById('cfg-modal').classList.add('show');
+  const q = new URLSearchParams({channel: CH, id: String(id)});
+  const r = await fetch('/api/cfg/schema?' + q, {credentials: 'same-origin'});
+  const j = await r.json();
+  document.getElementById('cfg-loading').style.display = 'none';
+  if (!j.ok) { CJ.toast(j.error || '读取模板失败', 'err'); return; }
+  renderSchema(j.groups || []);
+  cfgJsonOriginal = JSON.stringify(j.row || {}, null, 2);
+  document.getElementById('cfg-json').value = cfgJsonOriginal;
 }
 
 function closeCfg() { document.getElementById('cfg-modal').classList.remove('show'); }
 
 async function saveCfg() {
-  const channel = document.getElementById('cfg-channel').value;
   const id = document.getElementById('cfg-id').value;
   const d = new FormData();
-  d.append('channel', channel);
+  d.append('channel', CH);
   d.append('mode', id && id !== '0' ? 'update' : 'add');
   if (id && id !== '0') d.append('id', id);
-  const tpStart = document.getElementById('cfg-start-tp').value;
-  const startVal = document.getElementById('cfg-start-val').value.trim();
-  d.append('title', document.getElementById('cfg-title-input').value.trim());
-  d.append('ruler_action', document.getElementById('cfg-action').value);
-  d.append('is_start', document.getElementById('cfg-is-start').checked ? '1' : '');
-  d.append('from_cid', document.getElementById('cfg-from-cid').value.trim());
-  d.append('from_title', document.getElementById('cfg-from-title').value.trim());
-  d.append('to_cid', document.getElementById('cfg-to-cid').value.trim());
-  d.append('to_title', document.getElementById('cfg-to-title').value.trim());
-  d.append('start_tp', tpStart);
-  if (startVal) d.append(tpStart === 'date' ? 'start_date' : 'start_url', startVal);
-  const endVal = document.getElementById('cfg-end-val').value.trim();
-  if (endVal) {
-    d.append('end_tp', /^\d+$/.test(endVal) ? 'date' : 'url');
-    d.append(/^\d+$/.test(endVal) ? 'end_date' : 'end_url', endVal);
+
+  const jsonBox = document.getElementById('cfg-json');
+  const jsonDirty = jsonBox.value.trim() && jsonBox.value.trim() !== cfgJsonOriginal.trim();
+  if (jsonDirty) {
+    d.append('json_override', jsonBox.value.trim());
+  } else {
+    document.querySelectorAll('#cfg-fields [data-path]').forEach((el) => {
+      const path = el.dataset.path;
+      if (el.type === 'checkbox') {
+        d.append(`fields[${path}]`, el.checked ? '1' : '');
+      } else {
+        d.append(`fields[${path}]`, el.value);
+      }
+    });
   }
-  d.append('exclude_keywords', document.getElementById('cfg-exclude').value.trim());
-  const jsonText = document.getElementById('cfg-json').value.trim();
-  if (jsonText) d.append('json_override', jsonText);
 
   const btn = document.getElementById('cfg-save');
   btn.disabled = true;
   try {
-    const {status, body} = await postForm('/api/cfg/save', d);
+    const {body} = await postForm('/api/cfg/save', d);
     const box = document.getElementById('cfg-result');
     if (body.ok) {
       CJ.toast('配置已保存', 'ok');
@@ -309,20 +285,20 @@ document.querySelectorAll('[data-cfg-rows]').forEach((btn) => {
 });
 
 // 整份配置通道
-async function loadWhole(channel) {
-  const r = await fetch('/api/cfg/row?channel=' + encodeURIComponent(channel), {credentials: 'same-origin'});
+async function loadWhole() {
+  const r = await fetch('/api/cfg/row?channel=' + encodeURIComponent(CH), {credentials: 'same-origin'});
   const j = await r.json();
   document.getElementById('whole-config').value = JSON.stringify(j.row || {}, null, 2);
 }
-async function fillWholeTpl(channel) {
-  const r = await fetch('/api/cfg/row?channel=' + encodeURIComponent(channel) + '&id=0', {credentials: 'same-origin'});
+async function fillWholeTpl() {
+  const r = await fetch('/api/cfg/row?channel=' + encodeURIComponent(CH) + '&id=0', {credentials: 'same-origin'});
   const j = await r.json();
   document.getElementById('whole-config').value = JSON.stringify(j.row || {}, null, 2);
   CJ.toast('已填入模板，改完记得保存', 'warn');
 }
-async function saveWhole(channel) {
+async function saveWhole() {
   const d = new FormData();
-  d.append('channel', channel);
+  d.append('channel', CH);
   d.append('mode', 'whole');
   d.append('config', document.getElementById('whole-config').value);
   const {body} = await postForm('/api/cfg/save', d);

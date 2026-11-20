@@ -136,7 +136,48 @@
     if (atBottom) el.scrollTop = el.scrollHeight;
   }
 
-  function setDot(id, ok, text) {
+  
+/* ---------- 登录状态（后端在等什么） ---------- */
+function renderLoginState(login) {
+  const label = document.getElementById("login-state-label");
+  const hint = document.getElementById("login-state-hint");
+  const age = document.getElementById("login-state-age");
+  if (!login) return;
+  const map = {
+    logged_in: "ok",
+    wait_code: "warn",
+    wait_password: "warn",
+    wait_phone: "warn",
+    idle: "",
+    logged_out: "",
+  };
+  if (label) {
+    label.textContent = login.label || login.state;
+    label.className = "badge " + (map[login.state] || "");
+  }
+  if (hint) hint.textContent = login.hint || "";
+  if (age) age.textContent = login.age == null ? "" : "（" + login.age + " 秒前）";
+
+  document.querySelectorAll("[data-need-state]").forEach(function (form) {
+    const need = form.getAttribute("data-need-state");
+    const ok = login.state === need;
+    form.classList.toggle("state-blocked", !ok);
+    let note = form.querySelector(".state-note");
+    if (!ok) {
+      if (!note) {
+        note = document.createElement("p");
+        note.className = "small muted state-note";
+        form.appendChild(note);
+      }
+      note.textContent = "当前状态不是「" + (need === "wait_code" ? "等待验证码"
+        : need === "wait_password" ? "等待二次验证密码" : "等待手机号") + "」，提交会被后端忽略。";
+    } else if (note) {
+      note.remove();
+    }
+  });
+}
+
+function setDot(id, ok, text) {
     const el = document.getElementById(id);
     if (!el) return;
     el.textContent = text;
@@ -171,6 +212,7 @@
       if (r.status === 401) { location.href = "/login"; return; }
       const j = await r.json();
       setDot("live-backend", !!j.backend_ok, j.backend_ok ? "正常" : "无响应");
+      renderLoginState(j.login);
       if (j.snapshot) setDot("live-ws", !!j.snapshot.connected, j.snapshot.connected ? "已连接" : "断开");
       if (j.is_vip) {
         Object.entries(j.is_vip).forEach(([id, ok]) => {

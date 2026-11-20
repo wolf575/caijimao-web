@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import cfgmodel, parity, payloads
+from . import cfgform, cfgmodel, parity, payloads, tools
 from .auth import COOKIE_NAME, Auth, Session
 from .backend import BackendClient
 from .wsbridge import WsBridge
@@ -420,6 +420,13 @@ for _path in SERVICE_ROUTES:
     )
 
 
+@app.get("/tools", response_class=HTMLResponse)
+async def page_tools(request: Request, session: Session = Depends(guard)):
+    ctx = _ctx(request, session, active="/tools")
+    ctx["groups"] = tools.catalog()
+    return templates.TemplateResponse(request, "tools.html", ctx)
+
+
 @app.get("/settings", response_class=HTMLResponse)
 async def page_settings(request: Request, session: Session = Depends(guard)):
     ant = await backend.get_json("td_web_req", "GetAntConfig")
@@ -586,6 +593,28 @@ async def api_cfg_row(session: Session = Depends(guard), channel: str = "", id: 
     return JSONResponse({"ok": True, "channel": channel, "id": id, "row": row})
 
 
+@app.get("/api/cfg/schema")
+async def api_cfg_schema(channel: str, id: int = 0, session: Session = Depends(guard)):
+    """把模板（id=0）或现有配置行展开成可编辑字段分组。"""
+    if channel not in parity.BY_KEY:
+        return JSONResponse({"ok": False, "error": "unknown channel"}, status_code=400)
+    if not cfgmodel.has_row_api(channel):
+        return JSONResponse({"ok": False, "error": "该通道是整份配置，请用 JSON 编辑器"}, status_code=400)
+    if id:
+        detail = await backend.call(channel, "GetCfgRow", id)
+        row = detail.get("data")
+        if not isinstance(row, dict):
+            return JSONResponse({"ok": False, "error": "读取配置行失败"}, status_code=400)
+    else:
+        row = cfgmodel.template(channel)
+    if not isinstance(row, dict):
+        return JSONResponse({"ok": False, "error": "没有配置模板"}, status_code=404)
+    return JSONResponse(
+        {"ok": True, "channel": channel, "id": id, "row": row,
+         "groups": cfgform.describe(row)}
+    )
+
+
 @app.post("/api/cfg/save")
 async def api_cfg_save(request: Request, session: Session = Depends(guard)):
     form = await request.form()
@@ -629,6 +658,32 @@ async def api_cfg_save(request: Request, session: Session = Depends(guard)):
         if not isinstance(detail.get("data"), dict):
             return JSONResponse({"ok": False, "error": "读取原配置失败，请刷新后重试"}, status_code=400)
         base = detail["data"]
+
+    # fields[data.Craw.from_chat.cid] 形式的字段表（cfgform 自动表单）
+    dotted = {k[7:-1]: str(v) for k, v in fields.items() if k.startswith("fields[") and k.endswith("]")}
+    if dotted:
+        sample = base if base is not None else cfgmodel.template(channel)
+        if not isinstance(sample, dict):
+            return JSONResponse({"ok": False, "error": "没有配置模板"}, status_code=404)
+        try:
+            row = cfgform.apply_fields(sample, dotted)
+        except ValueError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+        if mode == "update":
+            row["id"] = int(str(form.get("id") or 0))
+        else:
+            row.pop("id", None)
+        result = await backend.call(channel, "FlushCfgRow", ["upsert", row])
+        if result.get("errors"):
+            return JSONResponse(
+                {"ok": False, "error": "后端拒绝了这行配置", "detail": result.get("errors")},
+                status_code=400,
+            )
+        log.info("cfg upsert(form) user=%s %s id=%s", session.user, channel, row.get("id"))
+        return JSONResponse({"ok": True, "mode": mode, "id": row.get("id"),
+                             "task_id": (result.get("data") or {}).get("task_id")
+                             if isinstance(result.get("data"), dict) else result.get("data"),
+                             "result": result})
 
     try:
         row = cfgmodel.build_row(channel, fields, base)
@@ -734,6 +789,7 @@ async def api_state(session: Session = Depends(guard)):
             "ok": True,
             "backend_ok": await backend.ping(),
             "is_vip": bridge.is_vip(),
+            "login": bridge.login_state(),
             "snapshot": bridge.snapshot(),
             "recent": bridge.recent(80),
         }

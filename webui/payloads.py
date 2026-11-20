@@ -60,6 +60,16 @@ def _raw(hint: str = "复杂结构，请按桌面版格式填写 JSON") -> Spec:
     return {"kind": "raw", "hint": hint}
 
 
+def _objt(typed: Dict[str, str], hint: str = "") -> Spec:
+    """类型化对象：typed 是 {字段名: 类型}，类型 ∈ int/bool/str/list/json。"""
+    return {
+        "kind": "obj",
+        "fields": tuple(typed.keys()),
+        "typed": dict(typed),
+        "hint": hint or "对象：" + ", ".join(f"{k}:{v}" for k, v in typed.items()),
+    }
+
+
 # --------------------------------------------------------------------------
 # 精确规格：登录 / 设置 / 配置行 / 服务控制 / 备份恢复 —— 网页上真正会用到的部分
 # --------------------------------------------------------------------------
@@ -261,10 +271,27 @@ def build(channel: str, action: str, form: Dict[str, Any]) -> Any:
                 out.append(raw)
         return out
     if kind == "obj":
+        typed = sp.get("typed") or {}
         obj: Dict[str, Any] = {}
         for name in sp["fields"]:
-            if name in form:
-                obj[name] = form[name]
+            if name not in form:
+                continue
+            raw = form[name]
+            t = typed.get(name, "str")
+            if t == "int":
+                obj[name] = _as_int(raw)
+            elif t == "bool":
+                obj[name] = _as_bool(raw)
+            elif t == "list":
+                obj[name] = _as_list(raw, "int")
+            elif t == "json":
+                if isinstance(raw, (dict, list)):
+                    obj[name] = raw
+                else:
+                    txt = str(raw).strip()
+                    obj[name] = json.loads(txt) if txt else None
+            else:
+                obj[name] = _as_str(raw)
         return obj
     # raw
     raw = form.get("value", form.get("raw", "1"))
@@ -277,3 +304,48 @@ def build(channel: str, action: str, form: Dict[str, Any]) -> Any:
         return json.loads(s)
     except Exception:
         return s
+
+# ---------------------------------------------------------------- 工具页动作
+# 桌面端真实形状（来自 utils/http_req_*.pyc 反汇编）：
+#   RegexReplace      -> {tp, body, regex_expr, replace_str}
+#   TestReplaceBatch  -> {body, replaces}
+#   TestMarkdown      -> body（字符串）
+#   SendMessage       -> {cid, body}
+#   ExportMd5         -> {is_task, x_id, short_dir}
+#   MoveSrcDirs       -> {src_dir_short, dst_dir_short, del_src}
+TOOL_SPEC: Dict[Tuple[str, str], Spec] = {
+    ("ecr_td_web_req", "RegexReplace"): _objt(
+        {"tp": "str", "body": "str", "regex_expr": "str", "replace_str": "str"},
+        "正则替换测试：tp 一般填 text / caption，body 是原文",
+    ),
+    ("ecc_td_web_req", "RegexReplace"): _objt(
+        {"tp": "str", "body": "str", "regex_expr": "str", "replace_str": "str"},
+    ),
+    ("ecr_td_web_req", "TestReplaceBatch"): _objt(
+        {"body": "str", "replaces": "json"}, "批量替换测试：replaces 是替换规则数组 JSON",
+    ),
+    ("ecc_td_web_req", "TestReplaceBatch"): _objt(
+        {"body": "str", "replaces": "json"},
+    ),
+    ("ecr_td_web_req", "TestMarkdown"): _str("body", "Markdown 原文"),
+    ("ecc_td_web_req", "TestMarkdown"): _str("body", "Markdown 原文"),
+    ("ecr_td_web_req", "SendMessage"): _objt({"cid": "int", "body": "str"}, "往指定会话发一条消息"),
+    ("ecc_td_web_req", "SendMessage"): _objt({"cid": "int", "body": "str"}),
+    ("va_td_web_req", "ExportMd5"): _objt(
+        {"is_task": "bool", "x_id": "int", "short_dir": "str"}, "导出 MD5 清单",
+    ),
+    ("va_td_web_req", "MoveSrcDirs"): _objt(
+        {"src_dir_short": "str", "dst_dir_short": "str", "del_src": "bool"}, "移动源目录",
+    ),
+    ("va_td_web_req", "ReBuildSrcDirs"): _unit(),
+    ("va_td_web_req", "DelChatMd5"): _int("cid", "要清理 MD5 记录的会话 id"),
+    ("va_td_web_req", "GetSrcSubDirs"): _str("short_dir", "目录简称，可留空"),
+    ("va_td_web_req", "FreeDownloadUrl"): _str("url", "消息链接"),
+    ("va_td_web_req", "ImportFiles"): _str("short_dir", "要导入的目录"),
+    ("ecr_td_web_req", "ClearTaskProgress"): _int("task_id", "配置行 id"),
+    ("ecc_td_web_req", "ClearTaskProgress"): _int("task_id", "配置行 id"),
+    ("ecr_td_web_req", "BatchClearTaskProgress"): _list("int", "ids", "配置行 id 列表"),
+    ("ecc_td_web_req", "BatchClearTaskProgress"): _list("int", "ids", "配置行 id 列表"),
+}
+
+SPEC.update(TOOL_SPEC)

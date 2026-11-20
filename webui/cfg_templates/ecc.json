@@ -1,7 +1,7 @@
 {
- "title": "粉逼福利",
- "prior_no": 100,
- "is_start": true,
+ "title": "",
+ "prior_no": 0,
+ "is_start": false,
  "ruler_action": "Single",
  "data": {
   "craw_types": [
@@ -18,25 +18,25 @@
    "is_admin": false,
    "is_bot": false,
    "senders": [],
-   "is_all": true,
+   "is_all": false,
    "is_sel": false
   },
   "from_chat": {
-   "cid": -1001898824702,
-   "title": "📣粉逼福利@mybaby",
-   "is_channel": true,
+   "cid": 0,
+   "title": "",
+   "is_channel": false,
    "tid": 0,
    "url": "",
    "remark": ""
   },
   "start": {
    "tp": "date",
-   "date": 1676995200,
+   "date": 0,
    "url": ""
   },
   "end": {
    "tp": "date",
-   "date": 1795104000,
+   "date": 0,
    "url": ""
   },
   "always_download": false,
@@ -53,16 +53,12 @@
    0,
    0
   ],
-  "exclude_keywords": [
-   "SOSO",
-   "暗网吃瓜资源",
-   "https://t.me/soso988"
-  ],
+  "exclude_keywords": [],
   "include_keywords": [],
   "to_chat": {
-   "cid": -1004326098384,
-   "title": "📣test8",
-   "is_channel": true,
+   "cid": 0,
+   "title": "",
+   "is_channel": false,
    "tid": 0,
    "url": "",
    "remark": ""
@@ -121,7 +117,7 @@
     "is_admin": false,
     "is_bot": false,
     "senders": [],
-    "is_all": true,
+    "is_all": false,
     "is_sel": false
    },
    "replaces": [],

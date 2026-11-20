@@ -1,30 +1,4 @@
 {
- "rulers": [
-  {
-   "is_start": false,
-   "from_cid": [
-    0,
-    ""
-   ],
-   "src_tps": [],
-   "sender_tps": [],
-   "start": {
-    "tp": "url",
-    "date": 0,
-    "url": ""
-   },
-   "end": {
-    "tp": "url",
-    "date": 0,
-    "url": ""
-   },
-   "filter_text_type": "All",
-   "monitor_now_msg": false,
-   "action": "Del",
-   "del_keywords": [],
-   "replaces": [],
-   "no_right_del": false
-  }
- ],
+ "rulers": [],
  "show_detail_log": false
 }

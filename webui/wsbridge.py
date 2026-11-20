@@ -33,6 +33,7 @@ class WsBridge:
     def __init__(self, url: str = "ws://127.0.0.1:3333/ws", state_path: str | Path | None = None) -> None:
         self.url = url
         self.state: dict[str, dict[str, Any]] = {}
+        self.state_ts: dict[str, dict[str, float]] = {}
         self.events: deque[dict[str, Any]] = deque(maxlen=MAX_EVENTS)
         self._subs: set[asyncio.Queue] = set()
         self._task: asyncio.Task | None = None
@@ -111,8 +112,10 @@ class WsBridge:
                 if not isinstance(payload, dict):
                     continue
                 slot = self.state.setdefault(bus, {})
+                tslot = self.state_ts.setdefault(bus, {})
                 for key, value in payload.items():
                     slot[key] = value
+                    tslot[key] = time.time()
                     if key == "IsVip" and isinstance(value, dict) and "module_id" in value:
                         with contextlib.suppress(TypeError, ValueError):
                             self._vip[int(value["module_id"])] = bool(value.get("is_vip"))
@@ -174,6 +177,56 @@ class WsBridge:
             "frames": self.frames,
             "buses": self.state,
         }
+
+
+    # ---- 登录状态机（网页用来告诉用户「后端正在等什么」） ----
+    _LOGIN_BUS = "td_login_ws_bus"
+
+    def login_state(self) -> dict[str, Any]:
+        bus = self.state.get(self._LOGIN_BUS, {})
+        ts = self.state_ts.get(self._LOGIN_BUS, {})
+        now = time.time()
+
+        def age(name: str) -> float | None:
+            t = ts.get(name)
+            return None if t is None else round(now - t, 1)
+
+        def fresh(name: str, within: float = 900.0) -> bool:
+            a = age(name)
+            return a is not None and a <= within
+
+        # 已登录优先（LoginSuccess 比 Logout 新）
+        ls, lo = ts.get("LoginSuccess"), ts.get("Logout")
+        if ls and (lo is None or ls > lo):
+            return {"state": "logged_in", "label": "已登录", "waiting": None,
+                    "age": age("LoginSuccess"), "hint": "可以直接启动各项服务了。"}
+        if lo and (ls is None or lo > ls) and not fresh("AskAuthCode", 120):
+            if not fresh("AskPassword", 900) and not fresh("AskPhone", 900):
+                return {"state": "logged_out", "label": "未登录", "waiting": None,
+                        "age": age("Logout"), "hint": "点右上角「开始登录」。"}
+
+        # AskAuthCode 在 WaitCode 期间每秒重复推送；它一停、AskPassword 出现，就说明验证码过了
+        ts_code = ts.get("AskAuthCode")
+        ts_psw = ts.get("AskPassword")
+        psw_after_code = ts_psw is not None and (ts_code is None or ts_psw >= ts_code)
+        if fresh("AskPassword", 900) and psw_after_code:
+            return {"state": "wait_password", "label": "等待二次验证密码", "waiting": "password",
+                    "age": age("AskPassword"), "data": bus.get("AskPassword"),
+                    "hint": "验证码已通过，账号开了两步验证：在下面填「二次验证密码」并提交。"}
+        if fresh("AskAuthCode", 60):
+            return {"state": "wait_code", "label": "等待验证码", "waiting": "code",
+                    "age": age("AskAuthCode"), "data": bus.get("AskAuthCode"),
+                    "hint": "去 Telegram 看验证码，填到下面「验证码」并提交（验证码会过期，超时就重新点开始登录）。"}
+        if fresh("AskPassword", 900):
+            return {"state": "wait_password", "label": "等待二次验证密码", "waiting": "password",
+                    "age": age("AskPassword"), "data": bus.get("AskPassword"),
+                    "hint": "在下面填「二次验证密码」并提交。"}
+        if fresh("AskPhone", 900):
+            return {"state": "wait_phone", "label": "等待手机号", "waiting": "phone",
+                    "age": age("AskPhone"), "data": bus.get("AskPhone"),
+                    "hint": "后端没有读到手机号：在下面填手机号（带国家代码）并提交。"}
+        return {"state": "idle", "label": "空闲 / 未在登录", "waiting": None, "age": None,
+                "hint": "后端当前没有在等任何输入。点右上角「开始登录」，等状态变成「等待验证码」再提交。"}
 
     def is_vip(self) -> dict[int, bool]:
         """Collapse the IsVip events into {module_id: bool}."""

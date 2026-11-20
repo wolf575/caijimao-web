@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}工具 · 采集猫 Web{% endblock %}
+{% block heading %}工具{% endblock %}
+
+{% block content %}
+<p class="state-note">
+  这里放的是桌面版各服务页里的「测试 / 取 id / 清空历史 / 目录整理」按钮。
+  每个动作的参数类型由后端 serde 规格决定，填错会在下方显示后端返回的错误。
+</p>
+
+{% for g in groups %}
+<section class="card">
+  <h3>{{ g.title }}</h3>
+  {% if g.desc %}<p class="empty">{{ g.desc }}</p>{% endif %}
+  <div class="tool-grid">
+    {% for it in g['items'] %}
+    <form class="tool" data-channel="{{ it.channel }}" data-action="{{ it.action }}">
+      <div class="tool-head">
+        <b>{{ it.title }}</b>
+        <span class="mini">{{ it.channel }} · {{ it.action }}</span>
+      </div>
+      {% if it.desc %}<div class="mini">{{ it.desc }}</div>{% endif %}
+      {% for f in it.fields %}
+        {% if f.type == 'checkbox' %}
+          <label class="chk"><input type="checkbox" name="{{ f.name }}"> {{ f.name }}</label>
+        {% elif f.type == 'textarea' %}
+          <textarea name="{{ f.name }}" rows="3" placeholder="{{ f.name }}"
+            spellcheck="false" style="font-family:ui-monospace,Consolas,monospace;font-size:12px"></textarea>
+        {% elif f.type == 'number' %}
+          <input type="number" name="{{ f.name }}" placeholder="{{ f.name }}">
+        {% else %}
+          <input type="text" name="{{ f.name }}" placeholder="{{ f.name }}">
+        {% endif %}
+      {% endfor %}
+      <div class="tool-actions">
+        <button class="btn primary tiny" type="submit">执行</button>
+        <span class="mini">{{ it.hint }}</span>
+      </div>
+      <pre class="mini tool-out"></pre>
+    </form>
+    {% endfor %}
+  </div>
+</section>
+{% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll('form.tool').forEach((form) => {
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const d = new FormData();
+    d.append('csrf_token', window.CSRF);
+    d.append('channel', form.dataset.channel);
+    d.append('action', form.dataset.action);
+    form.querySelectorAll('input,textarea').forEach((el) => {
+      if (el.type === 'checkbox') {
+        if (el.checked) d.append(el.name, '1');
+      } else {
+        d.append(el.name, el.value);
+      }
+    });
+    const out = form.querySelector('.tool-out');
+    out.textContent = '执行中…';
+    out.className = 'mini tool-out';
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/action', {method: 'POST', body: d, credentials: 'same-origin'});
+      const j = await r.json();
+      const data = j.data === undefined ? null : j.data;
+      out.textContent = (j.errors ? '后端错误：' + j.errors + '\n' : '') +
+        (typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+      out.className = 'mini tool-out' + (j.errors ? ' err' : (j.ok ? ' ok' : ' err'));
+    } catch (e) {
+      out.textContent = '请求失败：' + e;
+      out.className = 'mini tool-out err';
+    } finally { btn.disabled = false; }
+  });
+});
+</script>
+{% endblock %}

@@ -1,6 +1,6 @@
 {
- "title": "测试",
- "prior_no": 1,
+ "title": "",
+ "prior_no": 0,
  "is_start": false,
  "ruler_action": "craw",
  "data": {
@@ -15,19 +15,19 @@
    ],
    "restrict_craw_type": false,
    "from_chat": {
-    "cid": -1001898824702,
-    "title": "📣粉逼福利@mybaby",
-    "is_channel": true
+    "cid": 0,
+    "title": "",
+    "is_channel": false
    },
    "start": {
     "tp": "url",
     "date": 0,
-    "url": "https://t.me/mybaby/50584"
+    "url": ""
    },
    "end": {
     "tp": "url",
     "date": 0,
-    "url": "https://t.me/mybaby/50677"
+    "url": ""
    },
    "always_download": false,
    "replaces": [],
@@ -43,15 +43,12 @@
     0,
     0
    ],
-   "exclude_keywords": [
-    "SOSO",
-    "暗网吃瓜资源"
-   ],
+   "exclude_keywords": [],
    "include_keywords": [],
    "to_chat": {
-    "cid": -1004326098384,
-    "title": "📣test8",
-    "is_channel": true
+    "cid": 0,
+    "title": "",
+    "is_channel": false
    },
    "offset_minutes": 0,
    "offset_minutes_end": 0,

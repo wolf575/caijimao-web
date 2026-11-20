@@ -8,6 +8,19 @@
 {% endblock %}
 
 {% block content %}
+<div class="card" id="login-state-card">
+  <div class="flex wrap" style="gap:12px;align-items:center">
+    <h2 style="margin:0">登录状态</h2>
+    <span class="badge" id="login-state-label">读取中…</span>
+    <span class="small muted" id="login-state-age"></span>
+  </div>
+  <p class="small" id="login-state-hint" style="margin:8px 0 0">—</p>
+  <p class="small muted" style="margin:8px 0 0">
+    顺序是：<b>开始登录</b> → 状态变成「等待验证码」→ 填验证码提交 → 若账号开了两步验证，状态变成「等待二次验证密码」→ 填密码提交 → 「已登录」。
+    后端只在对应状态下接受输入，<b>状态不对时提交会被静默忽略</b>，所以请看这里的提示。
+  </p>
+</div>
+
 <div class="grid cols-2">
   <div class="card">
     <h2>基础配置（先填这里）</h2>
@@ -25,44 +38,51 @@
     </form>
     <p class="small muted">
       保存会写入 <span class="mono">ui-cfg.yml</span> 并让后端重载。api_id / api_hash 一般留空。
+      手机号存进配置后，点「开始登录」时后端会自己读，<b>不需要</b>再点「提交手机号」。
     </p>
     <hr>
     <h2>登录流程</h2>
-    <form data-action-form data-channel="td_web_req" data-action="SendPhone" data-value-mode="raw">
+    <form data-action-form data-channel="td_web_req" data-action="SendPhone" data-value-mode="raw"
+          data-need-state="wait_phone">
       <div class="field">
-        <label>手机号（带国家码，例如 +8613800000000）</label>
+        <label>手机号 <span class="small muted">（只有状态是「等待手机号」时才需要）</span></label>
         <div class="inline">
-          <input class="grow" name="value" type="text" value="{{ antcfg.phone }}" placeholder="+86...">
-          <button class="primary" type="submit">发送 / 提交手机号</button>
+          <input class="grow" name="phone" type="text" value="{{ antcfg.phone }}" placeholder="+8613xxxxxxxxx">
+          <button class="primary" type="submit">提交手机号</button>
         </div>
       </div>
     </form>
 
-    <form data-action-form data-channel="td_web_req" data-action="SendAuthCode" data-value-mode="raw">
+    <form data-action-form data-channel="td_web_req" data-action="SendAuthCode" data-value-mode="raw"
+          data-need-state="wait_code">
       <div class="field">
-        <label>验证码</label>
+        <label>验证码 <span class="small muted">（Telegram 里是 6 位；有效期几分钟，过期请重新点开始登录）</span></label>
         <div class="inline">
-          <input class="grow" name="value" type="text" placeholder="Telegram 收到的 5 位验证码">
-          <button type="submit">提交验证码</button>
+          <input class="grow" name="code" type="text" inputmode="numeric" maxlength="6"
+                 autocomplete="one-time-code" placeholder="例如 12345">
+          <button class="primary" type="submit">提交验证码</button>
         </div>
       </div>
     </form>
 
-    <form data-action-form data-channel="td_web_req" data-action="SendPassword" data-value-mode="raw">
+    <form data-action-form data-channel="td_web_req" data-action="SendPassword" data-value-mode="raw"
+          data-need-state="wait_password">
       <div class="field">
-        <label>二次验证密码（Two-Step Verification）</label>
+        <label>二次验证密码 <span class="small muted">（Two-Step Verification；没开就不用填）</span></label>
         <div class="inline">
-          <input class="grow" name="value" type="password" placeholder="没开二次验证就跳过">
-          <button type="submit">提交密码</button>
+          <input class="grow" name="password" type="password" autocomplete="current-password"
+                 placeholder="没开两步验证就跳过">
+          <button class="primary" type="submit">提交密码</button>
         </div>
       </div>
     </form>
 
     <hr>
     <div class="small muted">
-      当前提示：<span data-live="td_login_ws_bus.AskAuthCode">—</span>
-      <span data-live="td_login_ws_bus.AskPhone">—</span>
-      <span data-live="td_login_ws_bus.AskPassword">—</span>
+      原始事件：AskPhone <span data-live="td_login_ws_bus.AskPhone">—</span> ·
+      AskAuthCode <span data-live="td_login_ws_bus.AskAuthCode">—</span> ·
+      AskPassword <span data-live="td_login_ws_bus.AskPassword">—</span> ·
+      LoginSuccess <span data-live="td_login_ws_bus.LoginSuccess">—</span>
     </div>
   </div>
 
@@ -121,12 +141,12 @@
     <div class="grid">
       <form data-action-form data-channel="td_web_req" data-action="JoinChat" data-value-mode="raw">
         <div class="field"><label>加入频道/群（传 chat id 或 @username）</label>
-          <div class="inline"><input class="grow" name="value" type="text" placeholder="-1001234567890"><button type="submit">加入</button></div>
+          <div class="inline"><input class="grow" name="url" type="text" placeholder="-1001234567890"><button type="submit">加入</button></div>
         </div>
       </form>
       <form data-action-form data-channel="td_web_req" data-action="JoinChatOfMsgLink" data-value-mode="raw">
         <div class="field"><label>通过消息链接加入</label>
-          <div class="inline"><input class="grow" name="value" type="text" placeholder="https://t.me/xxx/123"><button type="submit">加入</button></div>
+          <div class="inline"><input class="grow" name="url" type="text" placeholder="https://t.me/xxx/123"><button type="submit">加入</button></div>
         </div>
       </form>
       <div class="flex wrap">
