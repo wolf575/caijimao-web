@@ -106,7 +106,7 @@ code.inline{background:#0c0e12;border:1px solid var(--line);padding:1px 5px;bord
 .logbox{
   background:#0c0e12;border:1px solid var(--line);border-radius:8px;padding:12px;
   font-family:ui-monospace,Consolas,monospace;font-size:12px;white-space:pre-wrap;
-  word-break:break-all;height:52vh;overflow:auto;color:#c8d2e0;
+  word-break:break-all;height:38vh;min-height:150px;overflow:auto;color:#c8d2e0;
 }
 .logbox .vip{color:#ffd48a}
 .muted{color:var(--muted)}
@@ -174,7 +174,7 @@ hr{border:none;border-top:1px solid var(--line);margin:14px 0}
 [data-theme="light"] .sidebar { background: #ffffff; border-right-color: var(--border); }
 [data-theme="light"] .topbar { background: rgba(255, 255, 255, .9); }
 [data-theme="light"] .logbox, [data-theme="light"] pre {
-  background: #0f172a; color: #d6e2f0;
+  background: #f8fafc; color: #22303f; border-color: var(--border);
 }
 [data-theme="light"] .badge { border-color: var(--border); }
 [data-theme="light"] .btn { background: var(--panel-2); color: var(--text); border-color: var(--border); }
@@ -236,3 +236,11 @@ hr{border:none;border-top:1px solid var(--line);margin:14px 0}
 .mini { font-size: 12px; color: var(--muted); white-space: pre-wrap; word-break: break-all; margin-top: 8px; }
 .mini.err, .err { color: var(--err); }
 pre.mini { max-height: 260px; overflow: auto; background: var(--panel-2); padding: 10px; border-radius: 8px; color: var(--text); }
+/* 空日志占位 */
+.logbox:empty::before{
+  content:"暂无日志（点击右上角【刷新】或等待后端输出）";
+  color:var(--muted);font-family:var(--font);
+}
+[data-theme="light"] nav a.active{
+  background:linear-gradient(90deg,rgba(37,99,235,.14),transparent);color:#1741a6;
+}

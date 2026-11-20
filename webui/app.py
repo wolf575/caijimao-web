@@ -749,11 +749,35 @@ async def api_stream(session: Session = Depends(guard)):
     )
 
 
+_NOISE = re.compile(r"(dump_update|unavailable client|found updates for unavailable)")
+
+
+def _clean_log(text: str, keep_indent: bool = False) -> list[str]:
+    """去掉 TDLib 的结构体续行与 dump_update 噪声，只留可读行。"""
+    out: list[str] = []
+    for ln in text.splitlines():
+        if not ln.strip():
+            continue
+        if _NOISE.search(ln):
+            continue
+        if not keep_indent and (ln.startswith("    ") or ln.startswith("\t")):
+            continue
+        out.append(ln.rstrip()[:400])
+    return out
+
+
 @app.get("/api/logs")
-async def api_logs(session: Session = Depends(guard), kind: str = "sys", lines: int = 200):
+async def api_logs(
+    session: Session = Depends(guard),
+    kind: str = "sys",
+    lines: int = 200,
+    raw: int = 0,
+):
     path = backend.syslog_path() if kind == "sys" else backend._newest_errlog()
-    text = backend.tail(path, 400_000)
-    rows = [ln for ln in text.splitlines() if ln.strip()]
+    text = backend.tail(path, 600_000)
+    rows = _clean_log(text, keep_indent=bool(raw))
+    if not rows:
+        rows = _clean_log(text, keep_indent=True)
     return JSONResponse(
         {"ok": True, "path": str(path) if path else None, "lines": rows[-lines:]}
     )
