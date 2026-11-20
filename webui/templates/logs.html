@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}日志 · 采集猫 Web{% endblock %}
+{% block heading %}日志{% endblock %}
+{% block actions %}
+  <a class="btn {{ 'primary' if kind == 'sys' else 'ghost' }}" href="/logs?kind=sys">系统日志</a>
+  <a class="btn {{ 'primary' if kind == 'err' else 'ghost' }}" href="/logs?kind=err">错误日志</a>
+  <button class="ghost" onclick="document.getElementById('logbox').scrollTop=document.getElementById('logbox').scrollHeight">跳到末尾</button>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="flex wrap" style="justify-content:space-between;align-items:center">
+    <div class="small muted mono">{{ path or '（未找到日志文件）' }}</div>
+    <label class="small muted flex" style="gap:6px;align-items:center">
+      <input type="checkbox" id="autoscroll" checked> 自动滚动
+    </label>
+  </div>
+  <pre id="logbox" class="logbox" style="height:64vh;margin-top:10px">{{ text }}</pre>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const box = document.getElementById("logbox");
+  const auto = document.getElementById("autoscroll");
+  const kind = "{{ kind }}";
+  box.scrollTop = box.scrollHeight;
+  async function pull() {
+    try {
+      const r = await fetch(`/api/logs?kind=${kind}&lines=800`, { credentials: "same-origin" });
+      if (!r.ok) return;
+      const j = await r.json();
+      const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+      box.textContent = (j.lines || []).join("\n");
+      if (auto.checked && atBottom) box.scrollTop = box.scrollHeight;
+    } catch (_) {}
+  }
+  setInterval(pull, 3000);
+})();
+</script>
+{% endblock %}

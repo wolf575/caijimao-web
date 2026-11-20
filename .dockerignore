@@ -1,0 +1,11 @@
+.git
+.gitignore
+data
+**/__pycache__
+**/*.pyc
+docs
+patch
+*.log
+.env
+docker/.env
+shots

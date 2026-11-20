@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}控制台 · 采集猫 Web{% endblock %}
+{% block heading %}原始动作控制台{% endblock %}
+{% block actions %}
+  <a class="btn ghost" href="/api/parity" target="_blank">parity.json</a>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <h2>为什么有这一页</h2>
+  <p class="small">
+    桌面版把 6 个通道、共 <b>{{ total }}</b> 个后端动作分散在若干页面上。本页把<b>每一个</b>动作都直接暴露出来，
+    保证没有任何后端能力在 Web 版里不可达 —— 这就是「功能一对一完整实现」的兜底。
+    正常使用请走侧边栏的常规页面；本页用于验证与排障。
+  </p>
+  {% if problems %}
+    <div class="err">parity 自检发现问题：<pre>{{ problems | tojson(indent=2) }}</pre></div>
+  {% else %}
+    <div class="ok small">parity 自检通过：6 通道全部动作均已覆盖（页面或本控制台）。</div>
+  {% endif %}
+  {% if console_only %}
+    <p class="small muted">仅能在本控制台调用的动作：<span class="mono">{{ console_only | join(', ') }}</span></p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>发送动作</h2>
+  <form data-action-form data-channel="td_web_req" data-action="GetVersion" data-value-mode="json" data-reload="no" id="console-form">
+    <div class="grid cols-3">
+      <div class="field">
+        <label>通道</label>
+        <select id="ch-select" name="channel"></select>
+      </div>
+      <div class="field">
+        <label>动作</label>
+        <select id="act-select" name="action"></select>
+      </div>
+      <div class="field">
+        <label>value（JSON / 数字 / 字符串）</label>
+        <input id="val-input" name="value" type="text" value="1">
+      </div>
+    </div>
+    <div class="flex wrap">
+      <button class="primary" type="submit">发送</button>
+      <button type="button" class="ghost" id="btn-raw">发送并显示原始响应</button>
+    </div>
+    <p class="small muted" style="margin-top:8px">
+      提示：后端 HTTP 层对未知动作也返回 <code class="inline">ok</code>，真正的错误只会写进
+      <a href="/logs?kind=err">错误日志</a>；本页会把新增的错误行一并取回显示。
+    </p>
+  </form>
+  <pre id="console-out" class="logbox" style="height:32vh;margin-top:10px"></pre>
+</div>
+
+<div class="card">
+  <h2>覆盖情况</h2>
+  <table>
+    <tr><th>通道</th><th>名称</th><th>事件总线</th><th>默认页面</th><th>动作数</th></tr>
+    {% for c in channels %}
+    <tr>
+      <td class="mono small">{{ c.key }}</td>
+      <td>{{ c.label }}</td>
+      <td class="mono small">{{ c.ws_bus }}</td>
+      <td><a href="{{ c.default_page }}">{{ c.default_page }}</a></td>
+      <td>{{ c.actions | length }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<script id="parity-data" type="application/json">
+[
+{% for c in channels %}{"key": {{ c.key | tojson }}, "label": {{ c.label | tojson }}, "actions": {{ c.actions | list | tojson }}}{% if not loop.last %},{% endif %}{% endfor %}
+]
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+  const data = JSON.parse(document.getElementById("parity-data").textContent);
+  const chSel = document.getElementById("ch-select");
+  const actSel = document.getElementById("act-select");
+  const form = document.getElementById("console-form");
+  const out = document.getElementById("console-out");
+
+  data.forEach((c) => {
+    const o = document.createElement("option");
+    o.value = c.key;
+    o.textContent = `${c.key} — ${c.label}`;
+    chSel.appendChild(o);
+  });
+
+  function fillActions() {
+    const c = data.find((x) => x.key === chSel.value);
+    actSel.innerHTML = "";
+    (c ? c.actions : []).forEach((a) => {
+      const o = document.createElement("option");
+      o.value = a;
+      o.textContent = a;
+      actSel.appendChild(o);
+    });
+    form.dataset.channel = chSel.value;
+  }
+  chSel.addEventListener("change", fillActions);
+  actSel.addEventListener("change", () => { form.dataset.action = actSel.value; });
+  fillActions();
+  form.dataset.action = actSel.value;
+
+  function log(s) {
+    out.textContent += (out.textContent ? "\n" : "") + s;
+    out.scrollTop = out.scrollHeight;
+  }
+
+  async function send(showRaw) {
+    const body = new FormData();
+    body.set("channel", chSel.value);
+    body.set("action", actSel.value);
+    body.set("value", document.getElementById("val-input").value);
+    body.set("csrf_token", window.CSRF || "");
+    const r = await fetch("/api/action", { method: "POST", body, credentials: "same-origin" });
+    const j = await r.json().catch(() => ({ ok: false, error: "invalid json" }));
+    log(`→ ${chSel.value}.${actSel.value}  HTTP ${r.status}`);
+    log(showRaw ? JSON.stringify(j, null, 2) : JSON.stringify(j));
+    if (j.errors) log("⚠ 后端新增错误：\n" + j.errors);
+  }
+
+  form.addEventListener("submit", (ev) => { ev.preventDefault(); send(false); });
+  document.getElementById("btn-raw").addEventListener("click", () => send(true));
+})();
+</script>
+{% endblock %}

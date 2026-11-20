@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{{ label }} · 采集猫 Web{% endblock %}
+{% block heading %}{{ label }}{% endblock %}
+{% block actions %}
+  <button class="primary" data-channel="{{ channel }}" data-action="{{ start_action }}">启动</button>
+  <button class="danger" data-channel="{{ channel }}" data-action="{{ stop_action }}" data-confirm="确认停止 {{ label }}？">停止</button>
+  <button class="ghost" data-channel="{{ channel }}" data-action="GetTaskStats">任务统计</button>
+{% endblock %}
+
+{% macro has(act) -%}
+  {%- for c in channels if c.key == channel -%}{{ '1' if act in c.actions else '' }}{%- endfor -%}
+{%- endmacro %}
+
+{% set ch = (channels | selectattr('key', 'equalto', channel) | list | first) %}
+
+{% block content %}
+<div class="grid cols-3">
+  <div class="card">
+    <h2>服务状态</h2>
+    <table>
+      <tr><th>通道</th><td class="mono small">{{ channel }}</td></tr>
+      <tr><th>事件总线</th><td class="mono small">{{ ch.ws_bus if ch else '—' }}</td></tr>
+      <tr><th>运行状态</th><td data-live="{{ ch.ws_bus ~ '.running' if ch else '' }}">—</td></tr>
+      <tr><th>心跳</th><td data-live="{{ ch.ws_bus ~ '.Heartbeat' if ch else '' }}">—</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>任务统计</h2>
+    <pre style="max-height:22vh">{{ stats | tojson(indent=2) if stats is not string else stats }}</pre>
+  </div>
+
+  <div class="card">
+    <h2>快捷操作</h2>
+    <div class="flex wrap">
+      {% if has('GetCfg') %}<button data-channel="{{ channel }}" data-action="GetCfg">读取配置</button>{% endif %}
+      {% if has('FlushCfg') %}<button data-channel="{{ channel }}" data-action="FlushCfg">刷新配置</button>{% endif %}
+      {% if has('StopServiceOnlyCraw') %}<button data-channel="{{ channel }}" data-action="StopServiceOnlyCraw">仅停爬取</button>{% endif %}
+      {% if has('ClearTaskProgress') %}<button data-channel="{{ channel }}" data-action="ClearTaskProgress" data-confirm="清空任务进度？">清空进度</button>{% endif %}
+      {% if has('BatchClearTaskProgress') %}<button data-channel="{{ channel }}" data-action="BatchClearTaskProgress" data-confirm="批量清空任务进度？">批量清空进度</button>{% endif %}
+      {% if has('ClearCrawHis') %}<button data-channel="{{ channel }}" data-action="ClearCrawHis" data-confirm="清空爬取历史？">清空爬取历史</button>{% endif %}
+      {% if has('ClearSendHis') %}<button data-channel="{{ channel }}" data-action="ClearSendHis" data-confirm="清空发送历史？">清空发送历史</button>{% endif %}
+      {% if has('ClearReplaceHis') %}<button data-channel="{{ channel }}" data-action="ClearReplaceHis" data-confirm="清空替换历史？">清空替换历史</button>{% endif %}
+      {% if has('GetTaskSyncProgress') %}<button data-channel="{{ channel }}" data-action="GetTaskSyncProgress">同步进度</button>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>配置</h2>
+  {% if cfg is mapping and cfg.rulers is defined %}
+    <table>
+      <tr><th>#</th><th>标题</th><th>动作</th><th>启用</th><th>来源</th><th>目标</th><th>操作</th></tr>
+      {% for r in cfg.rulers %}
+      <tr>
+        <td class="mono small">{{ r.id if r.id is defined else loop.index0 }}</td>
+        <td>{{ r.title if r.title is defined else '' }}</td>
+        <td class="mono small">{{ r.ruler_action if r.ruler_action is defined else '' }}</td>
+        <td>{% if r.is_start is defined %}<span class="badge {{ 'ok' if r.is_start else '' }}">{{ '是' if r.is_start else '否' }}</span>{% endif %}</td>
+        <td class="small mono">
+          {% if r.from_chat is defined %}{{ r.from_chat.title if r.from_chat.title is defined else '' }}
+            <span class="muted">{{ r.from_chat.cid if r.from_chat.cid is defined else '' }}</span>{% endif %}
+        </td>
+        <td class="small mono">
+          {% if r.to_chat is defined %}{{ r.to_chat.title if r.to_chat.title is defined else '' }}
+            <span class="muted">{{ r.to_chat.cid if r.to_chat.cid is defined else '' }}</span>{% endif %}
+        </td>
+        <td class="flex wrap">
+          {% if has('StartCfgRows') %}<button class="small" data-channel="{{ channel }}" data-action="StartCfgRows" data-value="[{{ r.id if r.id is defined else loop.index0 }}]">启动</button>{% endif %}
+          {% if has('StopCfgRows') %}<button class="small ghost" data-channel="{{ channel }}" data-action="StopCfgRows" data-value="[{{ r.id if r.id is defined else loop.index0 }}]">停止</button>{% endif %}
+          {% if has('GetCfgRow') %}<button class="small ghost" data-channel="{{ channel }}" data-action="GetCfgRow" data-value="{{ r.id if r.id is defined else loop.index0 }}">详情</button>{% endif %}
+          {% if has('RmCfgRows') %}<button class="small danger" data-channel="{{ channel }}" data-action="RmCfgRows" data-value="[{{ r.id if r.id is defined else loop.index0 }}]" data-confirm="删除该配置行？">删除</button>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% if cfg.slow_chats is defined and cfg.slow_chats %}
+      <h2 style="margin-top:18px">慢速频道</h2>
+      <pre>{{ cfg.slow_chats | tojson(indent=2) }}</pre>
+    {% endif %}
+  {% else %}
+    <pre style="max-height:32vh">{{ cfg | tojson(indent=2) if cfg is not string else cfg }}</pre>
+  {% endif %}
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h2>备份 / 恢复</h2>
+    <pre style="max-height:22vh">{{ backups | tojson(indent=2) if backups is not string else backups }}</pre>
+    <form data-action-form data-channel="{{ channel }}" data-action="RestoreCfg" data-value-mode="raw">
+      <div class="field">
+        <label>恢复指定备份（填备份文件名）</label>
+        <div class="inline">
+          <input class="grow" name="value" type="text" placeholder="2026-11-20-091500.yml">
+          <button type="submit" class="danger" data-confirm="用该备份覆盖当前配置？">恢复</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>实时日志</h2>
+    <pre id="svc-log" class="logbox" data-log="sys" style="height:34vh"></pre>
+  </div>
+</div>
+
+<div class="card">
+  <h2>高级动作</h2>
+  <p class="small muted">本通道共 {{ ch.actions | length if ch else 0 }} 个动作；未在页面上暴露的可到 <a href="/admin/console">控制台</a> 直接调用。</p>
+  <div class="flex wrap">
+    {% for a in (ch.actions if ch else []) %}
+      {% if a not in [start_action, stop_action, 'Ping'] %}
+        <button class="small ghost" data-channel="{{ channel }}" data-action="{{ a }}">{{ a }}</button>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

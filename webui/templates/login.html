@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>登录 · 采集猫 Web 控制台</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<div class="login-wrap">
+  <form class="login-card" method="post" action="/login">
+    <h1>采集猫 Web 控制台</h1>
+    <p>请输入管理账号后继续</p>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="field">
+      <label for="username">用户名</label>
+      <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+    </div>
+    <div class="field">
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
+    <button class="primary" type="submit" style="width:100%;padding:10px">登录</button>
+    <p style="margin-top:14px">
+      首次启动若未设置 <b>WEB_PASSWORD</b>，随机密码会打印在容器日志里。
+    </p>
+  </form>
+</div>
+</body>
+</html>

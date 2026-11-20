@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}采集猫 Web 控制台{% endblock %}</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="brand">
+    <span class="logo">猫</span>
+    <div>
+      <div class="brand-name">采集猫 Web</div>
+      <div class="brand-sub">v{{ version_label | default('4.3.0') }}</div>
+    </div>
+  </div>
+  <nav>
+    {% for item in nav() %}
+      <a href="{{ item.href }}" class="{{ 'active' if active == item.href else '' }}">{{ item.label }}</a>
+    {% endfor %}
+  </nav>
+  <div class="side-foot">
+    <div class="row"><span>用户</span><b>{{ user }}</b></div>
+    <div class="row"><span>后端</span><b id="live-backend" class="dot">…</b></div>
+    <div class="row"><span>事件流</span><b id="live-ws" class="dot">…</b></div>
+    <a class="logout" href="/logout">退出登录</a>
+  </div>
+</aside>
+
+<main>
+  <header class="topbar">
+    <h1>{% block heading %}{% endblock %}</h1>
+    <div class="topbar-actions">{% block actions %}{% endblock %}</div>
+  </header>
+  <section class="content">
+    {% block content %}{% endblock %}
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script>window.CSRF = "{{ csrf }}";</script>
+<script src="/static/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

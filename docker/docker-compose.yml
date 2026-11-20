@@ -1,0 +1,31 @@
+services:
+  caijimao-web:
+    image: ghcr.io/wolf575/caijimao-web:4.3.0
+    # 本地构建时改成 build: { context: .., dockerfile: docker/Dockerfile }
+    container_name: caijimao-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 登录 Web 界面用的账号密码（不设置则随机生成并打印一次）
+      WEB_USER: ${WEB_USER:-admin}
+      WEB_PASSWORD: ${WEB_PASSWORD:-}
+      # 建议设置固定值，否则重启后会话失效
+      SECRET_KEY: ${SECRET_KEY:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      TZ: ${TZ:-Asia/Shanghai}
+    volumes:
+      # 配置 / 登录态 / 下载缓存 / 日志都在这一个卷里
+      - ./data:/data
+    # Wine 下 TDLib 需要较大的文件描述符与共享内存
+    shm_size: "512mb"
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/healthz"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 90s

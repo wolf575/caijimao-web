@@ -1,0 +1,23 @@
+# 构建/运行产物
+data/
+payload/
+*.log
+*.pyc
+__pycache__/
+.venv/
+venv/
+
+# 本地测试残留
+.env
+docker/.env
+.is_vip.json
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 临时截图
+shots/
+*.tmp

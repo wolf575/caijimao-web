@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}全局设置 · 采集猫 Web{% endblock %}
+{% block heading %}全局设置{% endblock %}
+{% block actions %}
+  <button class="ghost" data-channel="td_web_req" data-action="ReloadCfg">重载配置</button>
+  <button class="danger" data-channel="td_web_req" data-action="StopProg" data-confirm="停止后台服务进程？">停止后台进程</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-2">
+  <div class="card">
+    <h2>TDLib / API 参数</h2>
+    <form data-action-form data-channel="td_web_req" data-action="FlushAntConfig" data-value-mode="json">
+      <div class="field">
+        <label>AntConfig（api_id / api_hash / req_limit / phone / hide_phone / proxy）</label>
+        <textarea name="value" style="min-height:190px">{{ ant | tojson(indent=2) if ant is not string else ant }}</textarea>
+      </div>
+      <button class="primary" type="submit">保存</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>媒体处理</h2>
+    <form data-action-form data-channel="td_web_req" data-action="FlushEncoder" data-value-mode="raw">
+      <div class="field">
+        <label>编码器（当前：<span class="mono">{{ encoder if encoder is string else (encoder | tojson) }}</span>）</label>
+        <div class="inline">
+          <input class="grow" name="value" type="text" placeholder="libx264 / h264_nvenc / hevc_nvenc …">
+          <button type="submit">设置</button>
+        </div>
+      </div>
+    </form>
+
+    <form data-action-form data-channel="td_web_req" data-action="FlushFFMpegThreadCount" data-value-mode="number">
+      <div class="field">
+        <label>ffmpeg 线程数（当前：<span class="mono">{{ threads if threads is string else (threads | tojson) }}</span>）</label>
+        <div class="inline">
+          <input class="grow" name="value" type="number" min="0" max="64" placeholder="4">
+          <button type="submit">设置</button>
+        </div>
+      </div>
+    </form>
+
+    <form data-action-form data-channel="td_web_req" data-action="FlushFFMpegSpeedDecode" data-value-mode="raw">
+      <div class="field">
+        <label>快速解码（当前：<span class="mono">{{ speed if speed is string else (speed | tojson) }}</span>）</label>
+        <div class="inline">
+          <select class="grow" name="value">
+            <option value="true">开启</option>
+            <option value="false">关闭</option>
+          </select>
+          <button type="submit">设置</button>
+        </div>
+      </div>
+    </form>
+
+    <form data-action-form data-channel="td_web_req" data-action="FlushSqliteSyncOff" data-value-mode="raw">
+      <div class="field">
+        <label>关闭 SQLite 同步写（当前：<span class="mono">{{ sqlite_off if sqlite_off is string else (sqlite_off | tojson) }}</span>）</label>
+        <div class="inline">
+          <select class="grow" name="value">
+            <option value="true">开启（更快，掉电可能丢数据）</option>
+            <option value="false">关闭（更安全）</option>
+          </select>
+          <button type="submit">设置</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h2>主机 / 更新源</h2>
+    <form data-action-form data-channel="td_web_req" data-action="FlushHostCfg" data-value-mode="json">
+      <div class="field">
+        <label>HostCfg（当前值见下）</label>
+        <textarea name="value" style="min-height:150px">{{ host | tojson(indent=2) if host is not string else host }}</textarea>
+      </div>
+      <button class="primary" type="submit">保存</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>文件名替换规则</h2>
+    <form data-action-form data-channel="td_web_req" data-action="FlushFileNameReplaces" data-value-mode="json">
+      <div class="field">
+        <label>规则列表（JSON）</label>
+        <textarea name="value" style="min-height:150px">{{ name_repl | tojson(indent=2) if name_repl is not string else name_repl }}</textarea>
+      </div>
+      <button class="primary" type="submit">保存</button>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <h2>客户授权</h2>
+  <table>
+    <tr><th>客户ID</th><td class="mono small">{{ hd.hd if hd is mapping and hd.hd is defined else (hd | tojson) }}</td></tr>
+  </table>
+  <div class="grid cols-2" style="margin-top:12px">
+    <form data-action-form data-channel="td_web_req" data-action="SetHdPwd" data-value-mode="json">
+      <div class="field">
+        <label>设置客户保护密码（JSON：["原客户ID", "新密码"]）</label>
+        <textarea name="value" style="min-height:80px">["{{ hd.hd if hd is mapping and hd.hd is defined else '' }}", ""]</textarea>
+      </div>
+      <button type="submit">设置密码</button>
+    </form>
+    <form data-action-form data-channel="td_web_req" data-action="UpgradeHd" data-value-mode="json">
+      <div class="field">
+        <label>授权迁移（JSON：["原客户ID", "密码"]）</label>
+        <textarea name="value" style="min-height:80px">["", ""]</textarea>
+      </div>
+      <button type="submit">执行迁移</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

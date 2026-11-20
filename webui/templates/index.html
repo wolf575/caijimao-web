@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}服务状态 · 采集猫 Web{% endblock %}
+{% block heading %}服务状态{% endblock %}
+{% block actions %}
+  <button data-channel="td_web_req" data-action="DoLogin" class="primary">登录 TD</button>
+  <button data-channel="td_web_req" data-action="DoLogout">退出 TD</button>
+  <button data-channel="td_web_req" data-action="GetLease" class="ghost">刷新授权</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-3">
+  <div class="card">
+    <h2>后台</h2>
+    <table>
+      <tr><th>后端进程</th><td>{% if backend_ok %}<span class="badge ok">正常</span>{% else %}<span class="badge err">无响应</span>{% endif %}</td></tr>
+      <tr><th>事件流</th><td>{% if ws_connected %}<span class="badge ok">已连接</span>{% else %}<span class="badge err">断开</span>{% endif %}</td></tr>
+      <tr><th>版本</th><td class="mono">{{ version.version if version and version.version is defined else (version or '—') }}</td></tr>
+      <tr><th>客户ID</th><td class="mono small">{{ hd.hd if hd and hd.hd is defined else (hd or '—') }}</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>VIP 模块（后端最后一次推送）</h2>
+    <p class="small muted" style="margin:-6px 0 10px">
+      后端只在状态变化时推送 <span class="mono">IsVip</span>；本版本已解除全部限制，此列<b>不影响</b>任何功能，仅作观测。
+    </p>
+    <table>
+      {% set names = {0:'爬虫服务',1:'替换/删除服务',2:'按钮机器人服务',3:'频道群克隆服务',4:'付费群助手',5:'爬虫PRO',6:'频道群克隆PRO',100:'扩展模块 100',999:'超级会员'} %}
+      {% for mid in [0,1,2,3,4,5,6,100,999] %}
+      <tr>
+        <th>{{ names.get(mid, '模块 ' ~ mid) }}</th>
+        <td>
+          {% set st = is_vip.get(mid) %}
+          {% if st is none %}
+            <span class="badge" data-vip="{{ mid }}">未推送</span>
+          {% else %}
+            <span class="badge {{ 'ok' if st else 'err' }}" data-vip="{{ mid }}">{{ '已开通' if st else '未开通' }}</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>实时事件</h2>
+    <table>
+      <tr><th>TDLib 速度</th><td data-live="td_login_ws_bus.TdlibReqSpeed">—</td></tr>
+      <tr><th>网络状态</th><td data-live="td_login_ws_bus.NetStatus">—</td></tr>
+      <tr><th>磁盘剩余</th><td data-live="td_login_ws_bus.DiskFree">—</td></tr>
+      <tr><th>登录状态</th><td data-live="td_login_ws_bus.LoginSuccess">—</td></tr>
+      <tr><th>验证码请求</th><td data-live="td_login_ws_bus.AskAuthCode">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>服务控制</h2>
+  <div class="grid cols-3">
+    {% set svc = [
+      ('ecr_td_web_req','爬虫PRO','StartService','StopService','/ecr'),
+      ('ecc_td_web_req','频道群克隆PRO','StartService','StopService','/ecc'),
+      ('replace_td_web_req','批量替换/删除服务','StartService','StopService','/replace'),
+      ('va_td_web_req','付费群助手','StartService','StopService','/va'),
+      ('button_bot_web_req','按钮机器人服务','StartBot','StopBot','/btn-bot')
+    ] %}
+    {% for ch, label, start, stop, href in svc %}
+    <div class="card" style="background:var(--panel-2)">
+      <div class="flex wrap" style="justify-content:space-between">
+        <b>{{ label }}</b>
+        <a class="small" href="{{ href }}">详情 →</a>
+      </div>
+      <div class="small muted mono" style="margin:6px 0 10px">{{ ch }}</div>
+      <div class="flex wrap">
+        <button class="primary" data-channel="{{ ch }}" data-action="{{ start }}">启动</button>
+        <button class="danger" data-channel="{{ ch }}" data-action="{{ stop }}">停止</button>
+        <button class="ghost" data-channel="{{ ch }}" data-action="GetTaskStats">任务统计</button>
+      </div>
+      <div class="small muted" style="margin-top:8px">状态：<span data-live="{{ 'ecr_td_ws_bus' if ch=='ecr_td_web_req' else ('ecc_td_ws_bus' if ch=='ecc_td_web_req' else ('replace_td_ws_bus' if ch=='replace_td_web_req' else ('va_td_ws_bus' if ch=='va_td_web_req' else 'button_bot_ws_bus'))) }}.running">—</span></div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h2>授权 / 租约</h2>
+    <pre>{{ lease | tojson(indent=2) }}</pre>
+  </div>
+  <div class="card">
+    <h2>实时事件流</h2>
+    <div id="live-log" class="logbox" style="height:36vh"></div>
+  </div>
+</div>
+{% endblock %}

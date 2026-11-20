@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}TD 登录 · 采集猫 Web{% endblock %}
+{% block heading %}TD 登录{% endblock %}
+{% block actions %}
+  <button class="primary" data-channel="td_web_req" data-action="DoLogin">开始登录</button>
+  <button class="danger" data-channel="td_web_req" data-action="DoLogout">退出登录</button>
+  <button class="ghost" data-channel="td_web_req" data-action="GetMyChatsFull">刷新用户列表</button>
+{% endblock %}
+
+{% block content %}
+<div class="grid cols-2">
+  <div class="card">
+    <h2>登录流程</h2>
+    <form data-action-form data-channel="td_web_req" data-action="SendPhone" data-value-mode="raw">
+      <div class="field">
+        <label>手机号（带国家码，例如 +8613800000000）</label>
+        <div class="inline">
+          <input class="grow" name="value" type="text" value="{{ ant.phone if ant and ant.phone is defined else '' }}" placeholder="+86...">
+          <button class="primary" type="submit">发送 / 提交手机号</button>
+        </div>
+      </div>
+    </form>
+
+    <form data-action-form data-channel="td_web_req" data-action="SendAuthCode" data-value-mode="raw">
+      <div class="field">
+        <label>验证码</label>
+        <div class="inline">
+          <input class="grow" name="value" type="text" placeholder="Telegram 收到的 5 位验证码">
+          <button type="submit">提交验证码</button>
+        </div>
+      </div>
+    </form>
+
+    <form data-action-form data-channel="td_web_req" data-action="SendPassword" data-value-mode="raw">
+      <div class="field">
+        <label>二次验证密码（Two-Step Verification）</label>
+        <div class="inline">
+          <input class="grow" name="value" type="password" placeholder="没开二次验证就跳过">
+          <button type="submit">提交密码</button>
+        </div>
+      </div>
+    </form>
+
+    <hr>
+    <div class="small muted">
+      当前提示：<span data-live="td_login_ws_bus.AskAuthCode">—</span>
+      <span data-live="td_login_ws_bus.AskPhone">—</span>
+      <span data-live="td_login_ws_bus.AskPassword">—</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>代理配置</h2>
+    <p class="small muted" style="margin:-6px 0 10px">
+      留空数组 <span class="mono">[]</span> 表示直连（后端会先做一次「直连网络测试」，通过就可以不配代理）。
+      如果提交手机号后长时间没有任何后续日志，说明直连不通，请在这里填你的代理再试。
+    </p>
+    <form data-action-form data-channel="td_web_req" data-action="FlushUiProxies" data-value-mode="json">
+      <div class="field">
+        <label>代理列表（JSON 数组，字段：enabled / server / port / user_name / password / secret / tp）</label>
+        <textarea name="value">[
+  {"enabled": true, "server": "127.0.0.1", "port": 10808,
+   "user_name": "", "password": "", "secret": "", "tp": "http"}
+]</textarea>
+      </div>
+      <button class="primary" type="submit">保存并生效</button>
+    </form>
+    <hr>
+    <h2>TDLib 参数</h2>
+    <pre>{{ ant | tojson(indent=2) }}</pre>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <h2>用户 / 频道列表</h2>
+    <div style="max-height:52vh;overflow:auto">
+      {% if chats is mapping and chats.chats is defined %}
+        <table>
+          <tr><th>ID</th><th>标题</th><th>类型</th></tr>
+          {% for c in chats.chats %}
+          <tr>
+            <td class="mono small">{{ c.id if c.id is defined else c }}</td>
+            <td>{{ c.title if c.title is defined else '' }}</td>
+            <td class="small muted">{{ c.type if c.type is defined else '' }}</td>
+          </tr>
+          {% endfor %}
+        </table>
+      {% elif chats is iterable and chats is not string %}
+        <table>
+          <tr><th>#</th><th>内容</th></tr>
+          {% for c in chats %}
+          <tr><td class="mono small">{{ loop.index0 }}</td><td class="mono small">{{ c | tojson }}</td></tr>
+          {% endfor %}
+        </table>
+      {% else %}
+        <pre>{{ chats | tojson(indent=2) if chats else '（暂无数据，先登录）' }}</pre>
+      {% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <h2>其它 TD 操作</h2>
+    <div class="grid">
+      <form data-action-form data-channel="td_web_req" data-action="JoinChat" data-value-mode="raw">
+        <div class="field"><label>加入频道/群（传 chat id 或 @username）</label>
+          <div class="inline"><input class="grow" name="value" type="text" placeholder="-1001234567890"><button type="submit">加入</button></div>
+        </div>
+      </form>
+      <form data-action-form data-channel="td_web_req" data-action="JoinChatOfMsgLink" data-value-mode="raw">
+        <div class="field"><label>通过消息链接加入</label>
+          <div class="inline"><input class="grow" name="value" type="text" placeholder="https://t.me/xxx/123"><button type="submit">加入</button></div>
+        </div>
+      </form>
+      <div class="flex wrap">
+        <button data-channel="td_web_req" data-action="BatchExitChat" class="danger" data-confirm="确认批量退出所有已加入的频道/群？">批量退出</button>
+        <button data-channel="td_web_req" data-action="ReloadCfg">重载配置</button>
+        <button data-channel="td_web_req" data-action="NotifyMyChats">通知刷新列表</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
