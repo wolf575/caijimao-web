@@ -15,6 +15,15 @@
 
 FROM debian:bookworm-slim
 
+# OCI 标签：把镜像和仓库关联起来（GHCR 靠 org.opencontainers.image.source 自动建链接，
+# 有了链接之后包的可见性才能跟随仓库）
+LABEL org.opencontainers.image.title="caijimao-web" \
+      org.opencontainers.image.description="采集猫 4.3.0 Web 版：Wine 跑原版 Rust 后端 + FastAPI 控制台" \
+      org.opencontainers.image.source="https://github.com/wolf575/caijimao-web" \
+      org.opencontainers.image.url="https://github.com/wolf575/caijimao-web" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="4.3.0"
+
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

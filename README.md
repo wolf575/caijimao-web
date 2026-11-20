@@ -27,6 +27,8 @@
 ### 1. 用现成镜像
 
 ```bash
+docker pull ghcr.io/wolf575/caijimao-web:4.3.0
+
 docker run -d --name caijimao-web \
   -p 8080:8080 \
   -e WEB_USER=admin \
@@ -37,6 +39,9 @@ docker run -d --name caijimao-web \
   --shm-size=512m \
   ghcr.io/wolf575/caijimao-web:4.3.0
 ```
+
+> 镜像约 **5.4 GB**（解压后），主要是 Wine 运行时（约 2.2 GB）+ 预初始化的
+> Wine prefix（约 1.5 GB）+ 后端载荷（180 MB）。拉取时请留够磁盘和时间。
 
 打开 <http://localhost:8080> → 输入账号密码 → 进入控制台。
 
