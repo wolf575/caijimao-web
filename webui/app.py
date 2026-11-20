@@ -21,7 +21,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from . import cfgform, cfgmodel, parity, payloads, tools
+from . import __version__, cfgform, cfgmodel, parity, payloads, tools
 from .auth import COOKIE_NAME, Auth, Session
 from .backend import BackendClient
 from .wsbridge import WsBridge
@@ -111,6 +111,7 @@ def _ctx(request: Request, session: Session, **extra: Any) -> dict[str, Any]:
         "active": request.url.path,
         "is_vip": bridge.is_vip(),
         "ws_connected": bridge.connected,
+        "version_label": __version__,
     }
     base.update(extra)
     return base
