@@ -208,6 +208,87 @@ async def page_index(request: Request, session: Session = Depends(guard)):
 
 
 PROXIES_FILE = "ui-proxy.yml"
+ANT_FILE = "ui-cfg.yml"
+
+
+def _read_ant() -> dict[str, Any]:
+    """极简 YAML 读取：ui-cfg.yml 只有 6 个扁平标量键，不值得引入依赖。"""
+    out: dict[str, Any] = {
+        "api_id": "", "api_hash": "", "req_limit": 35,
+        "phone": "", "hide_phone": False, "proxy": None,
+    }
+    try:
+        text = (APP_DIR / ANT_FILE).read_text(encoding="utf-8")
+    except OSError:
+        return out
+    for line in text.splitlines():
+        if ":" not in line or line.lstrip().startswith("#"):
+            continue
+        k, v = line.split(":", 1)
+        k, v = k.strip(), v.strip()
+        if v in ("''", '""', "null", "~", ""):
+            out[k] = "" if k != "proxy" else None
+        elif v in ("true", "false"):
+            out[k] = v == "true"
+        else:
+            out[k] = v.strip("'\"")
+    return out
+
+
+def _write_ant(cfg: dict[str, Any]) -> None:
+    def q(v: Any) -> str:
+        if v is None:
+            return "null"
+        if isinstance(v, bool):
+            return "true" if v else "false"
+        if isinstance(v, int):
+            return str(v)
+        return "'" + str(v).replace("'", "''") + "'"
+
+    body = "".join(
+        f"{k}: {q(cfg.get(k))}\n"
+        for k in ("api_id", "api_hash", "req_limit", "phone", "hide_phone", "proxy")
+    )
+    path = APP_DIR / ANT_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(body, encoding="utf-8")
+    os.replace(tmp, path)
+
+
+@app.post("/api/antcfg")
+async def api_antcfg(request: Request, session: Session = Depends(guard)):
+    """ui-cfg.yml 直接落盘 + ReloadCfg。后端 FlushAntConfig 的入参形状不可靠（会把
+    电话号码截成 '+'、req_limit 变 0），所以这里走文件，和桌面版行为一致。"""
+    form = await request.form()
+    if not auth.check_csrf(session, str(form.get("csrf_token") or "")):
+        return JSONResponse({"ok": False, "error": "csrf"}, status_code=400)
+    cur = _read_ant()
+    phone = str(form.get("phone") or "").strip()
+    if phone and not re.fullmatch(r"\+\d{6,20}", phone):
+        return JSONResponse({"ok": False, "error": "电话号码要以 + 和国家代码开头，例如 +8613xxxxxxxxx"},
+                            status_code=400)
+    try:
+        req_limit = int(str(form.get("req_limit") or cur.get("req_limit") or 35))
+    except ValueError:
+        req_limit = 35
+    cfg = {
+        "api_id": str(form.get("api_id") if form.get("api_id") is not None else cur.get("api_id", "")),
+        "api_hash": str(form.get("api_hash") if form.get("api_hash") is not None else cur.get("api_hash", "")),
+        "req_limit": req_limit if req_limit > 0 else 35,
+        "phone": phone if phone else cur.get("phone", ""),
+        "hide_phone": str(form.get("hide_phone") or "").lower() in ("1", "true", "on", "yes")
+        if "hide_phone" in form else bool(cur.get("hide_phone")),
+        "proxy": cur.get("proxy"),
+    }
+    try:
+        _write_ant(cfg)
+    except OSError as exc:
+        return JSONResponse({"ok": False, "error": f"写入失败: {exc}"}, status_code=500)
+    result = await backend.call("td_web_req", "ReloadCfg", True)
+    log.info("antcfg user=%s phone=%s req_limit=%s reload_ok=%s",
+             session.user, cfg["phone"], cfg["req_limit"], result["ok"])
+    return RedirectResponse("/td-login", status_code=303)
 
 
 def _read_proxies() -> tuple[str, str]:
@@ -239,6 +320,7 @@ async def page_td_login(request: Request, session: Session = Depends(guard)):
             ant=ant,
             proxies_text=proxies_text,
             proxies_file=proxies_file,
+            antcfg=_read_ant(),
             snapshot=bridge.snapshot(),
         ),
     )
