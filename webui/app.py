@@ -265,7 +265,8 @@ async def api_proxies(request: Request, session: Session = Depends(guard)):
         os.replace(tmp, path)
     except OSError as exc:
         return JSONResponse({"ok": False, "error": f"写入失败: {exc}"}, status_code=500)
-    result = await backend.call("td_web_req", "FlushUiProxies", True)
+    # 后端要的是代理数组本身（不是 bool）；同时把内容落到 ui-proxy.yml，重启后仍生效。
+    result = await backend.call("td_web_req", "FlushUiProxies", data)
     log.info("proxies user=%s count=%d reload_ok=%s", session.user, len(data), result["ok"])
     return RedirectResponse("/td-login", status_code=303)
 

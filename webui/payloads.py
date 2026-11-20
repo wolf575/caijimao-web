@@ -74,9 +74,11 @@ SPEC: Dict[Tuple[str, str], Spec] = {
     ("td_web_req", "ToMyChatsOtherOfMsgLink"): _str("url", "消息链接"),
     ("td_web_req", "MsgUrl"): _str("url", "消息链接"),
     ("td_web_req", "BatchExitChat"): _list("int", "cids", "要退出的会话 id 列表"),
-    # 后端这里只要一个 bool（表示「重新加载代理配置」），代理列表本身写在 app/ui-proxy.yml 里，
-    # 所以 Web 端走 /api/proxies（先落盘再 FlushUiProxies=true），不要直接发数组。
-    ("td_web_req", "FlushUiProxies"): _bool("enabled", "是否重新加载代理配置（代理列表请写入 ui-proxy.yml）"),
+    # 官方客户端把整个代理数组发过来（arg(data)），不是 bool。落盘到 ui-proxy.yml 只是顺带。
+    ("td_web_req", "FlushUiProxies"): _list("obj", "proxies", "代理列表，元素含 enabled/server/port/user_name/password/secret/tp"),
+    # 这两个都是 bool 入参；漏掉就会变成整数 1 → err.log 里 "expected a boolean"
+    ("td_web_req", "GetMyChatsFull"): _bool("enabled", "是否拉取完整会话列表（含频道/群）"),
+    ("td_web_req", "StopProg"): _bool("enabled", "停止后台服务（会让后端退出，随后自动重启）"),
     ("td_web_req", "FlushAntConfig"): _obj(
         ("api_id", "api_hash", "req_limit", "phone", "hide_phone", "proxy"),
         "TDLib 参数；req_limit 必须 ≥ 1，phone 留空或写 +86…",
