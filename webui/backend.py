@@ -23,6 +23,9 @@ from typing import Any
 import httpx
 
 from .parity import BY_KEY
+from .payloads import build as build_payload
+
+_UNSET = object()
 
 
 class BackendError(RuntimeError):
@@ -127,7 +130,7 @@ class BackendClient:
         self,
         channel: str,
         action: str,
-        value: Any = 1,
+        value: Any = _UNSET,
         capture_errors: bool = True,
     ) -> dict[str, Any]:
         if channel not in BY_KEY:
@@ -135,6 +138,11 @@ class BackendClient:
         if self._client is None:
             await self.start()
         assert self._client is not None
+
+        # 没显式给 value 时按官方客户端的入参规格构造，否则一律发 1 会在 err.log 里
+        # 留下一堆 deserialize_err（例如 GetMyChatsFull 要 bool、StartCfgRows 要数组）。
+        if value is _UNSET:
+            value = build_payload(channel, action, {})
 
         path, offset = self._err_offset() if capture_errors else (None, 0)
         payload = {channel: {action: value}}
@@ -170,7 +178,7 @@ class BackendClient:
             "errors": errors,
         }
 
-    async def get_json(self, channel: str, action: str, value: Any = 1) -> Any:
+    async def get_json(self, channel: str, action: str, value: Any = _UNSET) -> Any:
         res = await self.call(channel, action, value, capture_errors=False)
         return res.get("data")
 
