@@ -285,10 +285,17 @@ async def api_antcfg(request: Request, session: Session = Depends(guard)):
         _write_ant(cfg)
     except OSError as exc:
         return JSONResponse({"ok": False, "error": f"写入失败: {exc}"}, status_code=500)
-    result = await backend.call("td_web_req", "ReloadCfg", True)
-    log.info("antcfg user=%s phone=%s req_limit=%s reload_ok=%s",
-             session.user, cfg["phone"], cfg["req_limit"], result["ok"])
+    log.info("antcfg user=%s phone=%s req_limit=%s", session.user, cfg["phone"], cfg["req_limit"])
+    # ReloadCfg 有时会让后端短暂断开，异步触发即可，不要让页面等它
+    asyncio.create_task(_reload_cfg_quiet())
     return RedirectResponse("/td-login", status_code=303)
+
+
+async def _reload_cfg_quiet() -> None:
+    try:
+        await backend.call("td_web_req", "ReloadCfg", True)
+    except Exception as exc:  # noqa: BLE001 - 重载失败不影响已落盘的配置
+        log.warning("reload cfg failed: %s", exc)
 
 
 def _read_proxies() -> tuple[str, str]:
