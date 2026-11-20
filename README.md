@@ -26,18 +26,32 @@
 
 ### 1. 用现成镜像
 
+**推荐：一行命令**（没有续行符，复制粘贴不会出错）
+
+```bash
+docker run -d --name caijimao-web --restart unless-stopped -p 8080:8080 -e WEB_USER=admin -e WEB_PASSWORD='换成你自己的密码' -e TZ=Asia/Shanghai -v "$PWD/data:/data" --shm-size=512m ghcr.io/wolf575/caijimao-web:4.3.0
+```
+
+拉镜像（`docker run` 会自动拉，也可以先手动拉一次）：
+
 ```bash
 docker pull ghcr.io/wolf575/caijimao-web:4.3.0
+```
 
-docker run -d --name caijimao-web \
-  -p 8080:8080 \
-  -e WEB_USER=admin \
-  -e WEB_PASSWORD='换成你自己的密码' \
-  -e SECRET_KEY='随机长字符串，固定它可让会话不因重启失效' \
-  -e TZ=Asia/Shanghai \
-  -v "$PWD/data:/data" \
-  --shm-size=512m \
-  ghcr.io/wolf575/caijimao-web:4.3.0
+或者用脚本，密码、端口、数据目录都可以给：
+
+```bash
+./scripts/run.sh '换成你自己的密码'
+# PORT=18080 DATA_DIR=/srv/cjdata ./scripts/run.sh '换成你自己的密码'
+```
+
+或者用 compose（最不容易打错）：
+
+```bash
+mkdir -p cj && cd cj
+curl -fsSLO https://raw.githubusercontent.com/wolf575/caijimao-web/main/docker/docker-compose.yml
+printf 'WEB_PASSWORD=%s\n' '换成你自己的密码' > .env
+docker compose up -d
 ```
 
 > 镜像约 **5.4 GB**（解压后），主要是 Wine 运行时（约 2.2 GB）+ 预初始化的
@@ -54,6 +68,26 @@ docker run -d --name caijimao-web \
 ```bash
 docker logs caijimao-web | grep -i password
 ```
+
+#### 启动报错怎么办
+
+`docker: invalid reference format` —— 这是 **shell 把参数切错了**，不是镜像有问题
+（`docker pull` 已经成功就说明镜像没问题）。几乎都是多行命令粘贴时续行符 `\`
+被吃掉/带上了 `\r`，或者某个 `-e` 的值里有空格没引号。三种解法，任选：
+
+1. 用上面那条**单行**命令；
+2. 用 `./scripts/run.sh` 或 compose；
+3. 自己拼的话确认每个 `\` 后面**紧跟换行、没有空格**，且含空格的值用单引号包起来。
+
+其它常见情况：
+
+| 现象 | 原因 / 处理 |
+|---|---|
+| `no matching manifest for linux/arm64` | 镜像只有 `linux/amd64`。arm 机器（Apple Silicon、ARM 云主机）跑不了 Wine + x64 PE |
+| `docker ps` 一直 `starting` | 首次要初始化 Wine prefix，给到 120 秒；`docker logs` 能看到 `播种 config.yml` 之后才算正常 |
+| 打开页面 502 / 连不上 | 容器没 healthy：`docker logs caijimao-web`，重点看 `启动后端` 之后有没有 `log init 完成` |
+| 登录一直转圈不弹验证码 | `ui-proxy.yml` 是空代理列表且服务器直连不到 Telegram。进「TD 登录」页把代理填上（`socks5`/`http` 都行）再重试 |
+| 想换端口 | 改 `-p 18080:8080`，容器内固定 8080 |
 
 ### 2. 自己构建
 
