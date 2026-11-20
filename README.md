@@ -43,6 +43,10 @@ docker run -d --name caijimao-web \
 > 镜像约 **5.4 GB**（解压后），主要是 Wine 运行时（约 2.2 GB）+ 预初始化的
 > Wine prefix（约 1.5 GB）+ 后端载荷（180 MB）。拉取时请留够磁盘和时间。
 
+该镜像由本仓库的 GitHub Actions 从 `docker/Dockerfile` 构建并推送到 GHCR
+（见 [`.github/workflows/docker.yml`](.github/workflows/docker.yml)），公开可匿名拉取。
+想自己构建就走下面第 2 节，产物与镜像内完全一致。
+
 打开 <http://localhost:8080> → 输入账号密码 → 进入控制台。
 
 `WEB_PASSWORD` 不填时，容器会生成随机密码并**只在日志里打印一次**：
@@ -196,6 +200,11 @@ python patch/verify_md5.py                                   # 校验产物
 - `IsVip` 只在登录时推送一次，所以「VIP 模块」那栏常常显示 `未推送`。这不影响任何功能。
 - 容器内后端与 Web 控制台同生共死：Web 进程退出，容器退出（交给 `restart: unless-stopped` 拉起）；后端崩溃会被 entrypoint 自动重启。
 - 端口 3333/3334 是后端写死的，一个容器只能跑一个实例。
+- 镜像里 `crawler2.exe` 必须放在**镜像层**（`/app`），不能放到挂载卷里：Docker Desktop 的
+  virtiofs 挂载上 `wine` 执行这个 57 MB 的 PE 会直接 `rc=5` 且没有任何输出。详见
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+- 首次启动要初始化 Wine prefix（约 20 秒）+ 后端读配置，`HEALTHCHECK` 因此给了 120 秒
+  `start-period`。这段时间里 `docker ps` 显示 `starting` 是正常的。
 
 ## 目录结构
 
