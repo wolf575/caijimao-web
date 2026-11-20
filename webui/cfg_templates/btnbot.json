@@ -1,0 +1,15 @@
+{
+ "token": "",
+ "rulers": [
+  {
+   "is_start": false,
+   "split_album": false,
+   "from_cids": [],
+   "to_cids": [],
+   "row_button_count": 0,
+   "buttons": []
+  }
+ ],
+ "speed_limit": 0,
+ "show_detail_log": false
+}

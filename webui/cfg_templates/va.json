@@ -1,0 +1,130 @@
+{
+ "title": "粉逼福利",
+ "prior_no": 100,
+ "is_start": true,
+ "ruler_action": "vip",
+ "data": {
+  "craw_types": [
+   4,
+   1,
+   5,
+   2,
+   3,
+   6
+  ],
+  "restrict_craw_type": false,
+  "filter_sender": {
+   "is_anonymous": false,
+   "is_admin": false,
+   "is_bot": false,
+   "senders": [],
+   "is_all": true,
+   "is_sel": false
+  },
+  "from_chat": {
+   "cid": -1001898824702,
+   "title": "📣粉逼福利@mybaby",
+   "is_channel": true,
+   "tid": 0,
+   "url": "",
+   "remark": ""
+  },
+  "start": {
+   "tp": "date",
+   "date": 1676995200,
+   "url": ""
+  },
+  "end": {
+   "tp": "date",
+   "date": 1795104000,
+   "url": ""
+  },
+  "always_download": false,
+  "replaces": [],
+  "gt_size": 0,
+  "lt_size": 0,
+  "gt_minutes": 0,
+  "lt_minutes": 0,
+  "gt_wh": [
+   0,
+   0
+  ],
+  "lt_wh": [
+   0,
+   0
+  ],
+  "exclude_keywords": [
+   "SOSO",
+   "暗网吃瓜资源",
+   "https://t.me/soso988"
+  ],
+  "include_keywords": [],
+  "to_chat": {
+   "cid": -1004326098384,
+   "title": "📣test8",
+   "is_channel": true,
+   "tid": 0,
+   "url": "",
+   "remark": ""
+  },
+  "offset_minutes": 0,
+  "offset_minutes_end": 0,
+  "no_send_empty_caption_msg": false,
+  "optimize_len": false,
+  "add_foot_print_video": false,
+  "add_foot_print_image": false,
+  "foot_print": {
+   "title": "",
+   "font_path": "",
+   "font_name": "宋体",
+   "pos": "top",
+   "font_size": 24,
+   "auto_font_size": false,
+   "font_color": 13421772,
+   "thread_count": 0
+  },
+  "adjust_video_cover": false,
+  "always_preview": false,
+  "tran_msg_to_text": false,
+  "tran_msg_image_url": [],
+  "tran_msg_to_text_discuss": false,
+  "tran_msg_image_url_discuss": [],
+  "send_pre_msg": false,
+  "pre_msg_be_markdown": false,
+  "pre_msg_content": "",
+  "force_2_discuss_or_topic": false,
+  "video_slice": false,
+  "video_slice_data": {
+   "slice_type": "EachVideo",
+   "to_video_len": 0,
+   "to_video_len1": 0,
+   "to_video_count": 0,
+   "to_video_count1": 0,
+   "new_cover": false
+  },
+  "optimize_md5": {
+   "crop_video": false,
+   "crop_image": false,
+   "crop_data": {
+    "offset_min": 0,
+    "offset_max": 0
+   },
+   "mirror_video": false,
+   "mirror_image": false,
+   "pad_video": false,
+   "pad_image": false,
+   "pad_data": {
+    "offset_min": 0,
+    "offset_max": 0,
+    "color": 0
+   },
+   "virtual_duration": false,
+   "virtual_duration_data": {
+    "offset_min": 0,
+    "offset_max": 0
+   }
+  }
+ },
+ "cron_apply": false,
+ "crons": []
+}

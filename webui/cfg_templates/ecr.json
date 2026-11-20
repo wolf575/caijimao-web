@@ -1,0 +1,111 @@
+{
+ "title": "测试",
+ "prior_no": 1,
+ "is_start": false,
+ "ruler_action": "craw",
+ "data": {
+  "Craw": {
+   "craw_types": [
+    1,
+    2,
+    6,
+    5,
+    3,
+    4
+   ],
+   "restrict_craw_type": false,
+   "from_chat": {
+    "cid": -1001898824702,
+    "title": "📣粉逼福利@mybaby",
+    "is_channel": true
+   },
+   "start": {
+    "tp": "url",
+    "date": 0,
+    "url": "https://t.me/mybaby/50584"
+   },
+   "end": {
+    "tp": "url",
+    "date": 0,
+    "url": "https://t.me/mybaby/50677"
+   },
+   "always_download": false,
+   "replaces": [],
+   "gt_size": 0,
+   "lt_size": 0,
+   "gt_minutes": 0,
+   "lt_minutes": 0,
+   "gt_wh": [
+    0,
+    0
+   ],
+   "lt_wh": [
+    0,
+    0
+   ],
+   "exclude_keywords": [
+    "SOSO",
+    "暗网吃瓜资源"
+   ],
+   "include_keywords": [],
+   "to_chat": {
+    "cid": -1004326098384,
+    "title": "📣test8",
+    "is_channel": true
+   },
+   "offset_minutes": 0,
+   "offset_minutes_end": 0,
+   "no_send_empty_caption_msg": false,
+   "optimize_len": false,
+   "add_foot_print_video": false,
+   "add_foot_print_image": false,
+   "foot_print": {
+    "title": "",
+    "font_path": "",
+    "font_name": "",
+    "pos": "top-move",
+    "font_size": 28,
+    "auto_font_size": false,
+    "font_color": 16711680,
+    "thread_count": 0
+   },
+   "adjust_video_cover": false,
+   "always_preview": false,
+   "tran_msg_to_text": false,
+   "tran_msg_image_url": [],
+   "video_slice": false,
+   "video_slice_data": {
+    "slice_type": "EachVideo",
+    "to_video_len": 0,
+    "to_video_len1": 0,
+    "to_video_count": 0,
+    "to_video_count1": 0,
+    "new_cover": false
+   },
+   "optimize_md5": {
+    "crop_video": false,
+    "crop_image": false,
+    "crop_data": {
+     "offset_min": 0,
+     "offset_max": 0
+    },
+    "mirror_video": false,
+    "mirror_image": false,
+    "pad_video": false,
+    "pad_image": false,
+    "pad_data": {
+     "offset_min": 0,
+     "offset_max": 0,
+     "color": 0
+    },
+    "virtual_duration": false,
+    "virtual_duration_data": {
+     "offset_min": 0,
+     "offset_max": 0
+    }
+   }
+  }
+ },
+ "cron_apply": false,
+ "crons": []
+}

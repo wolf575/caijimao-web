@@ -1,10 +1,17 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}采集猫 Web 控制台{% endblock %}</title>
 <link rel="stylesheet" href="/static/app.css">
+<script>
+  // 先上主题再绘制，避免深色闪一下白
+  try {
+    var t = localStorage.getItem('cj-theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', t);
+  } catch (e) {}
+</script>
 </head>
 <body>
 <aside class="sidebar">
@@ -24,6 +31,10 @@
     <div class="row"><span>用户</span><b>{{ user }}</b></div>
     <div class="row"><span>后端</span><b id="live-backend" class="dot">…</b></div>
     <div class="row"><span>事件流</span><b id="live-ws" class="dot">…</b></div>
+    <div class="row">
+      <span>主题</span>
+      <button type="button" class="btn tiny" id="btn-theme" title="切换深色 / 浅色">深色</button>
+    </div>
     <a class="logout" href="/logout">退出登录</a>
   </div>
 </aside>

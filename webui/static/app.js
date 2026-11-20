@@ -209,3 +209,21 @@
     });
   });
 })();
+
+/* ------------------------------------------------------------------ 主题切换 */
+(function () {
+  var KEY = 'cj-theme';
+  var root = document.documentElement;
+  var btn = document.getElementById('btn-theme');
+  function apply(t) {
+    root.setAttribute('data-theme', t);
+    if (btn) btn.textContent = t === 'light' ? '浅色' : '深色';
+    try { localStorage.setItem(KEY, t); } catch (e) {}
+  }
+  apply(root.getAttribute('data-theme') || 'dark');
+  if (btn) {
+    btn.addEventListener('click', function () {
+      apply(root.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+    });
+  }
+})();

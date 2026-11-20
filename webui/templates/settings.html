@@ -2,11 +2,70 @@
 {% block title %}全局设置 · 采集猫 Web{% endblock %}
 {% block heading %}全局设置{% endblock %}
 {% block actions %}
-  <button class="ghost" data-channel="td_web_req" data-action="ReloadCfg">重载配置</button>
-  <button class="danger" data-channel="td_web_req" data-action="StopProg" data-confirm="停止后台服务进程？">停止后台进程</button>
+  <button class="btn" data-action data-channel="td_web_req" data-action="ReloadCfg">重载配置</button>
+  <button class="btn" onclick="loadDiag()">刷新诊断</button>
 {% endblock %}
 
 {% block content %}
+{# ---------------------------------------------------- 最容易把容器搞挂的地方 #}
+<section class="card">
+  <div class="card-head">
+    <h3>主机端口（改错会导致后端启动后不监听、登录报「后端错误」）</h3>
+    <div class="card-head-actions">
+      <button class="btn primary" onclick="saveHostCfg()">保存端口</button>
+    </div>
+  </div>
+  <p class="empty">
+    HTTP 端口默认 <b>3334</b>，WebSocket 端口默认 <b>3333</b>。两者都不能填 0 ——
+    填 0 时后端能启动但一个端口都不监听，之后所有操作都会失败。容器每次启动都会自动校验并修复。
+  </p>
+  <div class="grid3" style="margin-top:10px">
+    <div class="field">
+      <label>HTTP 端口（Web 控制台用它）</label>
+      <input id="host-http" type="number" min="1" max="65535" value="3334">
+    </div>
+    <div class="field">
+      <label>WebSocket 端口（事件流用它）</label>
+      <input id="host-ws" type="number" min="1" max="65535" value="3333">
+    </div>
+    <div class="field">
+      <label>实例名（可留空）</label>
+      <input id="host-name" placeholder="默认实例">
+    </div>
+  </div>
+  <div id="host-result" class="mini"></div>
+</section>
+
+{# ---------------------------------------------------------------- 诊断面板 #}
+<section class="card">
+  <div class="card-head">
+    <h3>运行时诊断</h3>
+    <div class="card-head-actions">
+      <button class="btn" onclick="loadDiag()">重新读取</button>
+    </div>
+  </div>
+  <div id="diag-warn" class="mini"></div>
+  <div class="grid2" style="margin-top:8px">
+    <div class="field">
+      <label>host-cfg.json</label>
+      <pre class="mini" id="diag-host">读取中…</pre>
+    </div>
+    <div class="field">
+      <label>ui-cfg.yml</label>
+      <pre class="mini" id="diag-uicfg">读取中…</pre>
+    </div>
+  </div>
+  <div class="field" style="margin-top:10px">
+    <label>后端日志（最新 sys.log 尾部）</label>
+    <pre class="mini" id="diag-syslog">读取中…</pre>
+  </div>
+  <div class="field" style="margin-top:10px">
+    <label>错误日志（最新 err.log 尾部，这里才是真正的报错）</label>
+    <pre class="mini" id="diag-errlog">读取中…</pre>
+  </div>
+</section>
+
+{# ---------------------------------------------------------------- 其它设置 #}
 <div class="grid cols-2">
   <div class="card">
     <h2>TDLib / API 参数</h2>
@@ -15,7 +74,7 @@
         <label>AntConfig（api_id / api_hash / req_limit / phone / hide_phone / proxy）</label>
         <textarea name="value" style="min-height:190px">{{ ant | tojson(indent=2) if ant is not string else ant }}</textarea>
       </div>
-      <button class="primary" type="submit">保存</button>
+      <button class="btn primary" type="submit">保存</button>
     </form>
   </div>
 
@@ -26,7 +85,7 @@
         <label>编码器（当前：<span class="mono">{{ encoder if encoder is string else (encoder | tojson) }}</span>）</label>
         <div class="inline">
           <input class="grow" name="value" type="text" placeholder="libx264 / h264_nvenc / hevc_nvenc …">
-          <button type="submit">设置</button>
+          <button class="btn" type="submit">设置</button>
         </div>
       </div>
     </form>
@@ -36,7 +95,7 @@
         <label>ffmpeg 线程数（当前：<span class="mono">{{ threads if threads is string else (threads | tojson) }}</span>）</label>
         <div class="inline">
           <input class="grow" name="value" type="number" min="0" max="64" placeholder="4">
-          <button type="submit">设置</button>
+          <button class="btn" type="submit">设置</button>
         </div>
       </div>
     </form>
@@ -49,7 +108,7 @@
             <option value="true">开启</option>
             <option value="false">关闭</option>
           </select>
-          <button type="submit">设置</button>
+          <button class="btn" type="submit">设置</button>
         </div>
       </div>
     </form>
@@ -62,7 +121,7 @@
             <option value="true">开启（更快，掉电可能丢数据）</option>
             <option value="false">关闭（更安全）</option>
           </select>
-          <button type="submit">设置</button>
+          <button class="btn" type="submit">设置</button>
         </div>
       </div>
     </form>
@@ -71,48 +130,97 @@
 
 <div class="grid cols-2">
   <div class="card">
-    <h2>主机 / 更新源</h2>
-    <form data-action-form data-channel="td_web_req" data-action="FlushHostCfg" data-value-mode="json">
-      <div class="field">
-        <label>HostCfg（当前值见下）</label>
-        <textarea name="value" style="min-height:150px">{{ host | tojson(indent=2) if host is not string else host }}</textarea>
-      </div>
-      <button class="primary" type="submit">保存</button>
-    </form>
-  </div>
-
-  <div class="card">
     <h2>文件名替换规则</h2>
     <form data-action-form data-channel="td_web_req" data-action="FlushFileNameReplaces" data-value-mode="json">
       <div class="field">
         <label>规则列表（JSON）</label>
         <textarea name="value" style="min-height:150px">{{ name_repl | tojson(indent=2) if name_repl is not string else name_repl }}</textarea>
       </div>
-      <button class="primary" type="submit">保存</button>
+      <button class="btn primary" type="submit">保存</button>
     </form>
   </div>
-</div>
 
-<div class="card">
-  <h2>客户授权</h2>
-  <table>
-    <tr><th>客户ID</th><td class="mono small">{{ hd.hd if hd is mapping and hd.hd is defined else (hd | tojson) }}</td></tr>
-  </table>
-  <div class="grid cols-2" style="margin-top:12px">
-    <form data-action-form data-channel="td_web_req" data-action="SetHdPwd" data-value-mode="json">
-      <div class="field">
-        <label>设置客户保护密码（JSON：["原客户ID", "新密码"]）</label>
-        <textarea name="value" style="min-height:80px">["{{ hd.hd if hd is mapping and hd.hd is defined else '' }}", ""]</textarea>
-      </div>
-      <button type="submit">设置密码</button>
-    </form>
-    <form data-action-form data-channel="td_web_req" data-action="UpgradeHd" data-value-mode="json">
-      <div class="field">
-        <label>授权迁移（JSON：["原客户ID", "密码"]）</label>
-        <textarea name="value" style="min-height:80px">["", ""]</textarea>
-      </div>
-      <button type="submit">执行迁移</button>
-    </form>
+  <div class="card">
+    <h2>客户授权</h2>
+    <div class="kv"><span>客户 ID</span><b class="mono">{{ hd.hd if hd is mapping and hd.hd is defined else (hd | tojson) }}</b></div>
+    <p class="empty">本镜像已解除 VIP 校验，这里仅用于查看 / 迁移授权信息。</p>
+    <div class="grid2" style="margin-top:12px">
+      <form data-action-form data-channel="td_web_req" data-action="SetHdPwd" data-value-mode="json">
+        <div class="field">
+          <label>设置客户保护密码（JSON：["原客户ID", "新密码"]）</label>
+          <textarea name="value" style="min-height:80px">["{{ hd.hd if hd is mapping and hd.hd is defined else '' }}", ""]</textarea>
+        </div>
+        <button class="btn" type="submit">设置密码</button>
+      </form>
+      <form data-action-form data-channel="td_web_req" data-action="UpgradeHd" data-value-mode="json">
+        <div class="field">
+          <label>授权迁移（JSON：["原客户ID", "密码"]）</label>
+          <textarea name="value" style="min-height:80px">["", ""]</textarea>
+        </div>
+        <button class="btn" type="submit">执行迁移</button>
+      </form>
+    </div>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadDiag() {
+  const r = await fetch('/api/diag', {credentials: 'same-origin'});
+  const j = await r.json();
+  document.getElementById('diag-host').textContent = j.host_cfg || '(文件不存在)';
+  document.getElementById('diag-uicfg').textContent = j.ui_cfg || '(文件不存在)';
+  document.getElementById('diag-syslog').textContent = j.syslog_tail || '(空)';
+  document.getElementById('diag-errlog').textContent = j.errlog_tail || '(空)';
+  const warn = document.getElementById('diag-warn');
+  if (j.warnings && j.warnings.length) {
+    warn.className = 'mini err';
+    warn.textContent = '⚠ ' + j.warnings.join('\n⚠ ');
+  } else {
+    warn.className = 'mini';
+    warn.textContent = '端口配置正常。';
+  }
+  try {
+    const host = JSON.parse(j.host_cfg || '{}');
+    document.getElementById('host-http').value = host.http_port || 3334;
+    document.getElementById('host-ws').value = host.ws_port || 3333;
+    document.getElementById('host-name').value = host.name || '';
+  } catch (e) {}
+}
+
+async function saveHostCfg() {
+  const http = parseInt(document.getElementById('host-http').value || '0', 10);
+  const ws = parseInt(document.getElementById('host-ws').value || '0', 10);
+  const box = document.getElementById('host-result');
+  if (!(http >= 1 && http <= 65535) || !(ws >= 1 && ws <= 65535)) {
+    box.className = 'mini err';
+    box.textContent = '端口必须是 1–65535 之间的整数；填 0 会让后端启动后不监听任何端口。';
+    return;
+  }
+  if (http === ws) {
+    box.className = 'mini err';
+    box.textContent = 'HTTP 端口和 WebSocket 端口不能相同。';
+    return;
+  }
+  const payload = {http_port: http, ws_port: ws, name: document.getElementById('host-name').value || ''};
+  const d = new FormData();
+  d.append('csrf_token', window.CSRF);
+  d.append('channel', 'td_web_req');
+  d.append('action', 'FlushHostCfg');
+  d.append('value', JSON.stringify(payload));
+  const r = await fetch('/api/action', {method: 'POST', body: d, credentials: 'same-origin'});
+  const j = await r.json();
+  if (j.ok && !j.errors) {
+    box.className = 'mini';
+    box.textContent = '已保存。端口变更需要重启容器才会生效（容器启动时会再次校验）。';
+    CJ.toast('端口已保存', 'ok');
+  } else {
+    box.className = 'mini err';
+    box.textContent = (j.error || '保存失败') + (j.errors ? '\n' + j.errors : '');
+  }
+}
+
+loadDiag();
+</script>
 {% endblock %}

@@ -324,3 +324,23 @@ if __name__ == "__main__":  # pragma: no cover - manual check
     for e in errs:
         print("PROBLEM:", e)
     print("OK" if not errs else "FAILED")
+
+
+# ---------------------------------------------------------------------------
+# 4.3.0 的 va_td_web_req 还有一批动作只出现在官方客户端的 http_req_va.pyc 里。
+# err.log 里的 `expected one of ...` 文本被截断过，所以这里补回来（幂等）。
+import dataclasses as _dc
+
+_VA_EXTRA = (
+    "SlowChatList", "FlushSlowChats",
+    "DiscussLostChannel", "DiscussLostChannelData", "DiscussLostChannelDel",
+    "DiscussLastLostChannel", "DiscussLastLostChannelData", "DiscussLastLostChannelDel",
+    "DiscussLastLostChannelGen", "DiscussLastLostUrlReSync", "ManualDiscussProgress",
+    "GetSendProgress", "SendContinue", "ClearCrawHis",
+)
+_va = BY_KEY["va_td_web_req"]
+_missing = tuple(a for a in _VA_EXTRA if a not in _va.actions)
+if _missing:
+    _va2 = _dc.replace(_va, actions=_va.actions + _missing)
+    BY_KEY["va_td_web_req"] = _va2
+    CHANNELS = [c if c.key != _va2.key else _va2 for c in CHANNELS]
