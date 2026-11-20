@@ -55,16 +55,17 @@
       留空数组 <span class="mono">[]</span> 表示直连（后端会先做一次「直连网络测试」，通过就可以不配代理）。
       如果提交手机号后长时间没有任何后续日志，说明直连不通，请在这里填你的代理再试。
     </p>
-    <form data-action-form data-channel="td_web_req" data-action="FlushUiProxies" data-value-mode="json">
+    <form method="post" action="/api/proxies">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
       <div class="field">
         <label>代理列表（JSON 数组，字段：enabled / server / port / user_name / password / secret / tp）</label>
-        <textarea name="value">[
-  {"enabled": true, "server": "127.0.0.1", "port": 10808,
-   "user_name": "", "password": "", "secret": "", "tp": "http"}
-]</textarea>
+        <textarea name="proxies">{{ proxies_text }}</textarea>
       </div>
       <button class="primary" type="submit">保存并生效</button>
     </form>
+    <p class="small muted">
+      保存会写入 <span class="mono">ui-proxy.yml</span> 并让后端重新加载。当前文件内容：<span class="mono">{{ proxies_file }}</span>
+    </p>
     <hr>
     <h2>TDLib 参数</h2>
     <pre>{{ ant | tojson(indent=2) }}</pre>

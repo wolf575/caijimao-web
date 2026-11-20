@@ -207,15 +207,67 @@ async def page_index(request: Request, session: Session = Depends(guard)):
     )
 
 
+PROXIES_FILE = "ui-proxy.yml"
+
+
+def _read_proxies() -> tuple[str, str]:
+    """返回 (编辑器文本, 文件当前内容)。"""
+    path = APP_DIR / PROXIES_FILE
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError:
+        raw = "[]\n"
+    try:
+        text = json.dumps(json.loads(raw or "[]"), ensure_ascii=False, indent=2)
+    except ValueError:
+        text = raw.strip() or "[]"
+    return text, (raw.strip() or "[]")
+
+
 @app.get("/td-login", response_class=HTMLResponse)
 async def page_td_login(request: Request, session: Session = Depends(guard)):
     chats = await backend.get_json("td_web_req", "GetMyChatsFull")
     ant = await backend.get_json("td_web_req", "GetAntConfig")
+    proxies_text, proxies_file = _read_proxies()
     return templates.TemplateResponse(
         request,
         "td_login.html",
-        _ctx(request, session, chats=chats, ant=ant, snapshot=bridge.snapshot()),
+        _ctx(
+            request,
+            session,
+            chats=chats,
+            ant=ant,
+            proxies_text=proxies_text,
+            proxies_file=proxies_file,
+            snapshot=bridge.snapshot(),
+        ),
     )
+
+
+@app.post("/api/proxies")
+async def api_proxies(request: Request, session: Session = Depends(guard)):
+    """代理列表要落盘到 app/ui-proxy.yml，后端只接受一个「重新加载」的 bool。"""
+    form = await request.form()
+    if not auth.check_csrf(session, str(form.get("csrf_token") or "")):
+        return JSONResponse({"ok": False, "error": "csrf"}, status_code=400)
+    raw = str(form.get("proxies") or "").strip() or "[]"
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        return JSONResponse({"ok": False, "error": f"JSON 解析失败: {exc}"}, status_code=400)
+    if not isinstance(data, list):
+        return JSONResponse({"ok": False, "error": "必须是一个 JSON 数组"}, status_code=400)
+    path = APP_DIR / PROXIES_FILE
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError as exc:
+        return JSONResponse({"ok": False, "error": f"写入失败: {exc}"}, status_code=500)
+    result = await backend.call("td_web_req", "FlushUiProxies", True)
+    log.info("proxies user=%s count=%d reload_ok=%s", session.user, len(data), result["ok"])
+    return RedirectResponse("/td-login", status_code=303)
 
 
 SERVICE_ROUTES = {

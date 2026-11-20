@@ -74,7 +74,9 @@ SPEC: Dict[Tuple[str, str], Spec] = {
     ("td_web_req", "ToMyChatsOtherOfMsgLink"): _str("url", "消息链接"),
     ("td_web_req", "MsgUrl"): _str("url", "消息链接"),
     ("td_web_req", "BatchExitChat"): _list("int", "cids", "要退出的会话 id 列表"),
-    ("td_web_req", "FlushUiProxies"): _list("obj", "proxies", "代理列表，元素含 enabled/server/port/user_name/password/secret/tp"),
+    # 后端这里只要一个 bool（表示「重新加载代理配置」），代理列表本身写在 app/ui-proxy.yml 里，
+    # 所以 Web 端走 /api/proxies（先落盘再 FlushUiProxies=true），不要直接发数组。
+    ("td_web_req", "FlushUiProxies"): _bool("enabled", "是否重新加载代理配置（代理列表请写入 ui-proxy.yml）"),
     ("td_web_req", "FlushAntConfig"): _obj(
         ("api_id", "api_hash", "req_limit", "phone", "hide_phone", "proxy"),
         "TDLib 参数；req_limit 必须 ≥ 1，phone 留空或写 +86…",
